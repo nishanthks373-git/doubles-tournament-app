@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Doubles Tournament</title>
+<style>
+:root{--bg:#eef1fb;--card:#fff;--tx:#17203a;--mu:#5f6b8a;--ac:#3b5bdb;--on:#fff;--tint:#e5eafd;--bd:#d9def2;--wn:#d6336c;--ta:#1c7ed6;--tb:#e8590c;--g1:#3b5bdb;--g2:#7048e8;--hl:#fff4c2}
+@media(prefers-color-scheme:dark){:root{--bg:#0f1426;--card:#1a2140;--tx:#eaeefc;--mu:#98a3c7;--ac:#8ea2ff;--on:#0f1426;--tint:#27305a;--bd:#2c3566;--wn:#ff7aa8;--ta:#74c0fc;--tb:#ffa94d;--g1:#4263eb;--g2:#7950f2;--hl:#3b3a22}}
+*{box-sizing:border-box}
+body{margin:0;font:16px/1.4 system-ui,sans-serif;background:var(--bg);color:var(--tx);padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+.wrap{max-width:560px;margin:0 auto;padding:14px 14px 40px}
+h1{font-size:1.3rem;margin:0;flex:1}h2{font-size:1.05rem;margin:0 0 .5rem}
+.top{display:flex;align-items:center;gap:8px;background:linear-gradient(120deg,var(--g1),var(--g2));color:#fff;border-radius:14px;padding:14px;margin:4px 0 14px}
+.card{background:var(--card);border:1px solid var(--bd);border-left:5px solid var(--ac);border-radius:12px;padding:14px;margin-bottom:12px}
+button{font:inherit;font-weight:600;border:0;border-radius:10px;padding:13px 16px;background:linear-gradient(90deg,var(--g1),var(--g2));color:#fff;width:100%;margin-top:8px}
+button.ghost{background:none;color:var(--ac);width:auto;margin:0;padding:8px 4px}
+.top button.ghost{color:#fff}
+button.sec{background:var(--tint);color:var(--ac)}
+button.warn{background:#f08c00;color:#fff}
+button.danger{background:none;color:var(--wn);border:1px solid var(--wn)}
+button.arm{background:var(--wn);color:#fff}
+input{font:inherit;color:var(--tx);background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:10px;width:100%}
+input:focus-visible,button:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+label{display:block;font-size:.85rem;color:var(--mu);margin:12px 0 4px}
+.rnd{display:inline-block;background:var(--ac);color:var(--on);border-radius:14px;padding:3px 14px}
+.match{padding:10px 0;border-top:1px solid var(--bd)}.match:first-of-type{border-top:0}
+.ln{display:flex;align-items:center;gap:10px;padding:3px 0}.tm{flex:1;font-weight:700}
+.ln input{width:80px;text-align:center;font-size:1.25rem;font-weight:700;border-width:2px}
+.ln.a .tm{color:var(--ta)}.ln.a input{border-color:var(--ta)}
+.ln.b .tm{color:var(--tb)}.ln.b input{border-color:var(--tb)}
+.vs{color:var(--mu);font-size:.8rem}
+table{width:100%;border-collapse:collapse}td,th{padding:9px 6px;border-bottom:1px solid var(--bd);text-align:left;white-space:nowrap}
+th{color:var(--mu);font-size:.75rem;font-weight:600;white-space:normal;line-height:1.15;vertical-align:bottom}.r{text-align:right}
+tr.top1 td{background:var(--hl)}.pt{color:var(--ac)}
+.rk{display:inline-block;min-width:26px;text-align:center;border-radius:13px;padding:1px 6px;font-weight:700;background:var(--tint)}
+.rk1{background:#ffd43b;color:#3b2f00}.rk2{background:#ced4da;color:#222}.rk3{background:#f0a868;color:#3a1c00}
+.mu{color:var(--mu);font-size:.9rem}
+.win{background:linear-gradient(120deg,#ffd43b,#ff922b);color:#2b1d00;border:0;font-size:1.1rem}
+.tag{display:inline-block;margin-top:6px;padding:3px 10px;border-radius:12px;font-size:.85rem;font-weight:600}
+.live{background:#fff3bf;color:#7a5a00}.done{background:#d3f9d8;color:#1b6b2f}
+.exp{display:flex;gap:8px}.exp button{flex:1;padding:10px 4px;margin-top:6px}
+.c1{background:#087f5b}.c2{background:#2b8a3e}.c3{background:#e03131}.c4{background:#7048e8}
+details{padding:8px 0;border-top:1px solid var(--bd)}summary{font-weight:600}
+.item{cursor:pointer}
+#toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);background:#16202c;color:#fff;padding:10px 16px;border-radius:20px;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90%;text-align:center}
+.sw{display:flex;align-items:center;gap:12px;margin:0;padding:10px 0;border-top:1px solid var(--bd);font-size:1rem;color:var(--tx)}
+.sw input{width:24px;height:24px;padding:0;accent-color:var(--ac);flex:none}
+.off{background:#e9ecef;color:#495057;margin-left:6px}
+.scr{overflow-x:auto;margin:0 -6px}
+.scr table{width:100%}
+.scr th:nth-child(n+3){min-width:44px}
+.scr td:nth-child(-n+2),.scr th:nth-child(-n+2){position:sticky;background:var(--card);z-index:1}
+.scr td:first-child,.scr th:first-child{left:0;min-width:46px}
+.scr td:nth-child(2),.scr th:nth-child(2){left:46px;max-width:130px;overflow:hidden;text-overflow:ellipsis}
+.scr tr.top1 td{background:var(--hl)}
+</style></head><body>
+<div class="wrap" id="app"></div><div id="toast"></div>
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let db;try{db=JSON.parse(localStorage.getItem('dt_v1'))||{t:[]}}catch(e){db={t:[]}}
+const save=()=>{try{localStorage.setItem('dt_v1',JSON.stringify(db))}catch(e){toast('Could not save data')}};
+let view={n:'home'},draft,armed=null,pending=null;
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+const T=()=>db.t.find(t=>t.id===view.id);
+function toast(m){const e=$('#toast');e.textContent=m;e.style.opacity=1;clearTimeout(toast.h);toast.h=setTimeout(()=>e.style.opacity=0,2600)}
+
+/* ---- scoring ---- */
+function stat(t){const s=t.players.map(()=>({pw:0,pl:0,gp:0,gw:0,gl:0}));
+ t.rounds.forEach(r=>r.closed&&r.matches.forEach(m=>[[m.a,m.sa,m.sb],[m.b,m.sb,m.sa]].forEach(([tm,f,a])=>tm.forEach(i=>{const x=s[i];x.pw+=f;x.pl+=a;x.gp++;if(f>a)x.gw++;else if(f<a)x.gl++}))));return s}
+function standings(t){const p=stat(t);return t.players.map((n,i)=>({n,i,...p[i],pts:p[i].pw})).sort((a,b)=>b.pts-a.pts||a.n.localeCompare(b.n))}
+const winners=t=>{const s=standings(t);return s.filter(x=>x.pts===s[0].pts)};
+
+/* ---- random round: all-new partners first, then least-repeated; opponents mixed ---- */
+function makeRound(t){
+ const n=t.players.length,k=(a,b)=>Math.min(a,b)+'-'+Math.max(a,b),pc={},oc={},sat=Array(n).fill(0);
+ const add=(o,a,b)=>{o[k(a,b)]=(o[k(a,b)]||0)+1};
+ t.rounds.forEach(r=>{r.matches.forEach(m=>{add(pc,...m.a);add(pc,...m.b);m.a.forEach(p=>m.b.forEach(q=>add(oc,p,q)))});r.sitting.forEach(i=>sat[i]++)});
+ const idx=[...Array(n).keys()];
+ for(let lvl=t.lvl||0;lvl<=60;lvl++){ /* lvl = how many times a pair may already have partnered */
+  let best=null,found=0;
+  for(let a=0;a<80&&found<12;a++){
+   const o=idx.map(i=>[i,sat[i]+Math.random()*(1+a/20)]).sort((x,y)=>x[1]-y[1]).map(x=>x[0]);
+   const sitting=o.slice(0,n%4),act=o.slice(n%4);let steps=0;
+   const pair=l=>{if(!l.length)return[];if(++steps>4000)return null;const f=l[0],rest=l.slice(1);
+    const c=shuffle(rest).filter(p=>(pc[k(f,p)]||0)<=lvl).sort((x,y)=>(pc[k(f,x)]||0)-(pc[k(f,y)]||0));
+    for(const p of c){const r=pair(rest.filter(x=>x!==p));if(r)return[[f,p]].concat(r)}return null};
+   const teams=pair(shuffle(act));
+   if(!teams)continue;
+   found++;const cost=teams.reduce((s,tm)=>s+(pc[k(...tm)]||0),0);
+   if(!best||cost<best.cost)best={teams,sitting,cost};
+   if(cost===0)break;
+  }
+  if(best){t.lvl=lvl;return layout(best.teams,best.sitting,oc,k)}
+ }
+ return null}
+/* pair the teams up so opponents have met as rarely as possible (random among the best) */
+function layout(teams,sitting,oc,k){
+ let bm=null,bc=Infinity;
+ for(let a=0;a<200&&bc>0;a++){
+  const s=shuffle(teams);let c=0;
+  for(let i=0;i<s.length;i+=2)s[i].forEach(p=>s[i+1].forEach(q=>c+=oc[k(p,q)]||0));
+  if(c<bc){bc=c;bm=s}
+ }
+ const matches=[];for(let i=0;i<bm.length;i+=2)matches.push({a:bm[i],b:bm[i+1],sa:null,sb:null});
+ return{matches,sitting,closed:false}}
+
+/* ---- actions ---- */
+function go(n,id){view={n,id};armed=null;render();scrollTo(0,0)}
+window.goBack=()=>{if(view.n==='home')return false;go('home');return true};
+function newT(){draft={name:'',count:8,names:Array(8).fill('')};go('new')}
+function setCount(v){const c=Math.min(40,Math.max(0,parseInt(v)||0));draft.count=c;while(draft.names.length<c)draft.names.push('');$('#names').innerHTML=namesHtml()}
+function start(){
+ const names=draft.names.slice(0,draft.count).map(s=>s.trim());
+ if(draft.count<4)return toast('You need at least 4 players');
+ if(names.some(x=>!x))return toast('Enter a name for every player');
+ if(new Set(names.map(x=>x.toLowerCase())).size<names.length)return toast('Player names must be different');
+ const t={id:Date.now(),name:draft.name.trim()||'Tournament '+(db.t.length+1),date:new Date().toISOString().slice(0,10),players:names,rounds:[],done:false};
+ t.rounds.push(makeRound(t));db.t.push(t);save();go('t',t.id)}
+function sc(i,s,v){const t=T(),r=t.rounds[t.rounds.length-1];r.matches[i]['s'+s]=v===''?null:Math.max(0,parseInt(v,10)||0);save()}
+const openR=new Set();function tg(k,o){o?openR.add(k):openR.delete(k)}
+function scPast(ri,mi,side,v){
+ const t=T(),n=parseInt(v,10);
+ if(t.done||!(n>=0)){toast('Enter a score of 0 or more');render();return}
+ t.rounds[ri].matches[mi]['s'+side]=n;save();render();toast('Score updated')}
+function complete(){
+ const t=T(),r=t.rounds[t.rounds.length-1];
+ if(r.matches.some(m=>m.sa===null||m.sb===null))return toast('Enter the score for every match');
+ r.closed=true;
+ const n=makeRound(t);if(n)t.rounds.push(n);else{t.done=true;t.note='Tournament finished: no further round could be drawn.'}
+ save();render();scrollTo(0,0)}
+const act={
+ end(){const t=T(),r=t.rounds[t.rounds.length-1];if(r.matches.every(m=>m.sa!==null&&m.sb!==null))r.closed=true;else t.rounds.pop();t.done=true;save();render()},
+ del(){db.t=db.t.filter(x=>x.id!==view.id);save();go('home')}};
+function arm(k){if(armed===k){armed=null;act[k]()}else{armed=k;render();setTimeout(()=>{if(armed===k){armed=null;render()}},3000)}}
+
+function toggleEx(id){const t=db.t.find(x=>x.id===id);t.ex=!t.ex;save();render()}
+
+/* ---- views ---- */
+const tn=(t,p)=>p.map(i=>esc(t.players[i])).join(' &amp; ');
+const rankOf=(rows,r)=>rows.findIndex(x=>x.pts===r.pts)+1;
+const PAL=['#3b5bdb','#e8590c','#2f9e44','#d6336c','#7048e8','#f08c00'];
+const rkb=(k,p)=>`<span class="rk ${k<4&&p>0?'rk'+k:''}">${k}</span>`;
+function tbl(rows){return '<div class=scr><table><tr><th>Rank</th><th>Player</th><th class=r>Points won</th><th class=r>Points lost</th><th class=r>Games played</th><th class=r>Games won</th><th class=r>Games lost</th></tr>'+rows.map(r=>{const k=rankOf(rows,r);return `<tr class="${k===1&&r.pts>0?'top1':''}"><td>${rkb(k,r.pts)}</td><td>${esc(r.n)}</td><td class=r><b class=pt>${r.pw}</b></td><td class=r>${r.pl}</td><td class=r>${r.gp}</td><td class=r>${r.gw}</td><td class=r>${r.gl}</td></tr>`}).join('')+'</table></div>'}
+const back='<div class=top><button class=ghost onclick="go(\'home\')">&lsaquo; Back</button>';
+function vHome(){
+ let h='<div class=top><h1>🏸 Doubles Tournament</h1></div><button onclick="newT()">New tournament</button><button class=sec onclick="go(\'all\')">🏆 All-time leaderboard</button><h2 style="margin:20px 0 8px">Your tournaments</h2>';
+ if(!db.t.length)h+='<p class=mu>Nothing here yet. Tap New tournament to add players and start round 1.</p>';
+ db.t.slice().reverse().forEach((t,i)=>{h+=`<div class="card item" style="border-left-color:${PAL[i%6]}" onclick="go('t',${t.id})"><b>${esc(t.name)}</b><div class=mu>${t.date}, ${t.players.length} players</div><div class="tag ${t.done?'done':'live'}">${t.done?'Finished: '+winners(t).map(x=>esc(x.n)).join(', ')+' ('+standings(t)[0].pts+' pts)':'In progress, round '+t.rounds.length}</div>${t.ex?'<div class="tag off">Not in all-time leaderboard</div>':''}</div>`});
+ h+='<div class=card><h2>Backup and transfer</h2><p class=mu>Save every tournament and the leaderboard to one file, or load a file made on another phone.</p><button class=c4 onclick="exportAll()">Export all data</button><button class=sec onclick="document.getElementById(\'imp\').click()">Import data from a file</button><input type=file id=imp hidden onchange="importFile(this)"></div>';
+ return h}
+function namesHtml(){return draft.names.slice(0,draft.count).map((n,i)=>`<input style="margin-bottom:8px" value="${esc(n)}" placeholder="Player ${i+1}" oninput="draft.names[${i}]=this.value">`).join('')}
+function vNew(){return back+'<h1>New tournament</h1></div><div class=card>'+
+ `<label>Tournament name</label><input value="${esc(draft.name)}" placeholder="e.g. Sunday doubles" oninput="draft.name=this.value">
+ <label>Number of players (at least 4)</label><input type=number inputmode=numeric min=4 max=40 value="${draft.count}" oninput="setCount(this.value)">
+ <h2 style="margin-top:18px">Player names</h2><div id=names>${namesHtml()}</div>
+ <p class=mu>Rounds keep coming until you finish the tournament. Partners are new every round until all pairings have been played, then teams may repeat but opponents are mixed. If the player count is not a multiple of 4, the extra players sit out and rotate fairly.</p>
+ <button onclick="start()">Start tournament</button></div>`}
+const expRow=k=>`<div class=mu style="margin-top:14px">Download this table</div><div class=exp><button class="c1" onclick="exportTable('${k}','csv')">CSV</button><button class="c2" onclick="exportTable('${k}','xlsx')">Excel</button><button class="c3" onclick="exportTable('${k}','pdf')">PDF</button><button class="c4" onclick="exportTable('${k}','png')">Image</button></div>`;
+function vT(){
+ const t=T();if(!t){view={n:'home'};return vHome()}
+ const last=t.rounds[t.rounds.length-1],st=standings(t);
+ let h=back+`<h1>${esc(t.name)}</h1></div>`;
+ if(t.done){const w=winners(t);h+=`<div class="card win">🏆 ${w.length>1?'Winners':'Winner'}: <b>${w.map(x=>esc(x.n)).join(' &amp; ')}</b> with ${st[0].pts} points</div>`;if(t.note)h+=`<p class=mu>${t.note}</p>`}
+ else{
+  h+=`<div class=card><h2><span class=rnd>Round ${t.rounds.length}</span></h2>`+last.matches.map((m,i)=>`<div class=match>
+   <div class="ln a"><span class=tm>${tn(t,m.a)}</span><input type=number inputmode=numeric min=0 value="${m.sa===null?'':m.sa}" oninput="sc(${i},'a',this.value)"></div>
+   <div class=vs>versus</div>
+   <div class="ln b"><span class=tm>${tn(t,m.b)}</span><input type=number inputmode=numeric min=0 value="${m.sb===null?'':m.sb}" oninput="sc(${i},'b',this.value)"></div></div>`).join('');
+  if(last.sitting.length)h+=`<p class=mu>Sitting out this round: ${last.sitting.map(i=>esc(t.players[i])).join(', ')}</p>`;
+  h+=`<button onclick="complete()">Complete round and draw next</button></div>`}
+ h+=`<div class=card><h2>${t.done?'Final standings':'Standings'}</h2>${tbl(st)}${expRow('t')}</div>`;
+ const hist=t.rounds.map((r,i)=>[r,i]).filter(x=>x[0].closed).reverse().map(([r,i])=>`<details ${openR.has(t.id+':'+i)?'open':''} ontoggle="tg('${t.id}:${i}',this.open)"><summary>Round ${i+1}</summary>${r.matches.map((m,mi)=>t.done?`<div class=mu style="padding:4px 0">${tn(t,m.a)} <b>${m.sa}</b> to <b>${m.sb}</b> ${tn(t,m.b)}</div>`:`<div class=match><div class="ln a"><span class=tm>${tn(t,m.a)}</span><input type=number inputmode=numeric min=0 value="${m.sa}" onchange="scPast(${i},${mi},'a',this.value)"></div><div class=vs>versus</div><div class="ln b"><span class=tm>${tn(t,m.b)}</span><input type=number inputmode=numeric min=0 value="${m.sb}" onchange="scPast(${i},${mi},'b',this.value)"></div></div>`).join('')}${r.sitting.length?`<div class=mu>Sat out: ${r.sitting.map(k=>esc(t.players[k])).join(', ')}</div>`:''}</details>`).join('');
+ if(hist)h+=`<div class=card><h2>Round results</h2>${t.done?'':'<p class=mu>Open a round to correct its scores. Standings update right away.</p>'}${hist}</div>`;
+ if(!t.done)h+=`<button class="${armed==='end'?'arm':'warn'}" onclick="arm('end')">${armed==='end'?'Tap again to finish tournament':'Finish tournament'}</button><p class=mu>Finishing counts the current round only if every score is entered.</p>`;
+ h+=`<button class=sec onclick="toggleEx(${t.id})">${t.ex?'Include in all-time leaderboard':'Exclude from all-time leaderboard'}</button>`;
+ h+=`<button class="${armed==='del'?'arm':'danger'}" onclick="arm('del')">${armed==='del'?'Tap again to delete':'Delete tournament'}</button>`;
+ return h}
+/* weighted points: tweak these numbers to change how the weighting behaves */
+const WK=4,OPP=[0.8,1.2],TF=[0.02,1.2],PF=[0.02,1.1];
+function allRows(){
+ const ts=db.t.filter(t=>!t.ex),m={},K=n=>n.toLowerCase();
+ ts.forEach(t=>{const st=standings(t),top=st.length?st[0].pts:0;
+  st.forEach(p=>{const e=m[K(p.n)]||(m[K(p.n)]={n:p.n,pts:0,pl:0,gp:0,gw:0,gl:0,tp:0,w:0,wp:0});
+   e.pts+=p.pw;e.pl+=p.pl;e.gp+=p.gp;e.gw+=p.gw;e.gl+=p.gl;if(p.gp>0)e.tp++;if(t.done&&p.pts===top&&top>0)e.w++})});
+ const R=Object.values(m),TP=R.reduce((a,e)=>a+e.pts,0),TG=R.reduce((a,e)=>a+e.gp,0),avg=TG?TP/TG:0;
+ /* opponent strength: points per game vs the overall average (1 = average), pulled toward 1 for players with few games */
+ const sp=n=>{const e=m[K(n)];return avg?((e.pts+WK*avg)/(e.gp+WK))/avg:1};
+ ts.forEach(t=>{const w={},g={};
+  t.rounds.forEach(r=>r.closed&&r.matches.forEach(mt=>[[mt.a,mt.b,mt.sa],[mt.b,mt.a,mt.sb]].forEach(([tm,op,f])=>{
+   const o=Math.min(OPP[1],Math.max(OPP[0],op.reduce((a,i)=>a+sp(t.players[i]),0)/2));
+   tm.forEach(i=>{const k=K(t.players[i]);w[k]=(w[k]||0)+f*o;g[k]=(g[k]||0)+1})})));
+  Object.keys(w).forEach(k=>m[k].wp+=w[k]*Math.min(TF[1],1+TF[0]*(g[k]-1)))});
+ return R.map(e=>({...e,ppg:e.gp?Math.round(e.pts/e.gp*100)/100:0,wpts:Math.round(e.wp*Math.min(PF[1],1+PF[0]*(Math.max(e.tp,1)-1))*10)/10})).sort((a,b)=>b.pts-a.pts||a.n.localeCompare(b.n))}
+function vAll(){
+ const rows=allRows(),inc=db.t.filter(t=>!t.ex).length;
+ const sw=db.t.length?`<div class=card><h2>Tournaments counted (${inc} of ${db.t.length})</h2>${db.t.slice().reverse().map(t=>`<label class=sw><input type=checkbox ${t.ex?'':'checked'} onchange="toggleEx(${t.id})"><span><b>${esc(t.name)}</b><br><span class=mu>${t.date}, ${t.done?'finished':'in progress'}</span></span></label>`).join('')}</div>`:'';
+ return back+'<h1>🏆 All-time leaderboard</h1></div>'+(rows.length?`<div class=card><div class=scr><table><tr><th>Rank</th><th>Player</th><th class=r>Total Points</th><th class=r>Tournaments played</th><th class=r>Tournaments won</th><th class=r>Points won</th><th class=r>Points lost</th><th class=r>Games played</th><th class=r>Games won</th><th class=r>Games lost</th><th class=r>Points per game</th><th class=r>Weighted points</th></tr>${rows.map(r=>{const k=rankOf(rows,r);return `<tr class="${k===1&&r.pts>0?'top1':''}"><td>${rkb(k,r.pts)}</td><td>${esc(r.n)}</td><td class=r><b class=pt>${r.pts}</b></td><td class=r>${r.tp}</td><td class=r>${r.w}</td><td class=r>${r.pts}</td><td class=r>${r.pl}</td><td class=r>${r.gp}</td><td class=r>${r.gw}</td><td class=r>${r.gl}</td><td class=r>${r.ppg}</td><td class=r>${r.wpts}</td></tr>`}).join('')}</table></div>${expRow('all')}</div><p class=mu>Players are matched by name. Only completed rounds count. Tournaments won counts finished tournaments. A drawn game counts as played, but not as won or lost. Points per game is Points won divided by games played. Rank follows Total Points.</p><div class=card><details><summary>How weighted points are calculated</summary><p class=mu>Each game starts with the points your team won. That is multiplied by 0.8 to 1.2 for the strength of the two opponents (their points per game compared with everyone's average, so playing top players counts more; players with few games are treated as closer to average). For each tournament the total is multiplied by up to 1.2 for how many rounds you played in it (+2% per round after the first). The grand total is multiplied by up to 1.1 for how many tournaments you played (+2% per tournament after the first).</p></details></div>`:`<p class=mu>${db.t.length?'No tournaments are counted. Tick one below to include it.':'Complete a round in any tournament to see totals here.'}</p>`)+sw}
+
+/* ---- export: CSV, Excel (.xlsx), PDF, image; all built offline ---- */
+function tData(t){const st=standings(t),n=t.rounds.filter(r=>r.closed).length;
+ return{name:t.name+'_standings',title:t.name,sub:`Standings after ${n} round${n===1?'':'s'}, ${t.date}`,sheet:'Standings',pi:2,
+  head:['Rank','Player','Points won','Points lost','Games played','Games won','Games lost'],rows:st.map(p=>[rankOf(st,p),p.n,p.pw,p.pl,p.gp,p.gw,p.gl])}}
+function aData(){const r=allRows();return{name:'All-time_leaderboard',title:'All-time leaderboard',sub:(n=>`Across ${n} tournament${n===1?'':'s'}`)(db.t.filter(t=>!t.ex).length),sheet:'Leaderboard',pi:2,
+ head:['Rank','Player','Total Points','Tournaments played','Tournaments won','Points won','Points lost','Games played','Games won','Games lost','Points per game','Weighted points'],
+ rows:r.map(x=>[rankOf(r,x),x.n,x.pts,x.tp,x.w,x.pts,x.pl,x.gp,x.gw,x.gl,x.ppg,x.wpts])}}
+const crcT=(()=>{const t=[];for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0}return t})();
+const crc=u=>{let c=-1;for(let i=0;i<u.length;i++)c=crcT[(c^u[i])&255]^(c>>>8);return(~c)>>>0};
+function zip(files){
+ const e=new TextEncoder(),parts=[],cd=[];let off=0;
+ const le=(n,b)=>{const a=[];for(let i=0;i<b;i++)a.push((n>>>(8*i))&255);return a};
+ files.forEach(([n,s])=>{const nb=e.encode(n),d=e.encode(s),c=crc(d);
+  const h=Uint8Array.from([...le(0x04034b50,4),...le(20,2),...le(0x0800,2),...le(0,2),...le(0,2),...le(0x21,2),...le(c,4),...le(d.length,4),...le(d.length,4),...le(nb.length,2),...le(0,2)]);
+  parts.push(h,nb,d);
+  cd.push(Uint8Array.from([...le(0x02014b50,4),...le(20,2),...le(20,2),...le(0x0800,2),...le(0,2),...le(0,2),...le(0x21,2),...le(c,4),...le(d.length,4),...le(d.length,4),...le(nb.length,2),...le(0,2),...le(0,2),...le(0,2),...le(0,2),...le(0,4),...le(off,4)]),nb);
+  off+=h.length+nb.length+d.length});
+ const cs=cd.reduce((a,x)=>a+x.length,0),end=Uint8Array.from([...le(0x06054b50,4),...le(0,2),...le(0,2),...le(files.length,2),...le(files.length,2),...le(cs,4),...le(off,4),...le(0,2)]);
+ const all=[...parts,...cd,end],o=new Uint8Array(all.reduce((a,x)=>a+x.length,0));let p=0;all.forEach(x=>{o.set(x,p);p+=x.length});return o}
+function xlsx(d){
+ const cn=i=>(i>25?String.fromCharCode(64+Math.floor(i/26)):'')+String.fromCharCode(65+i%26),x=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+ const rows=[d.head,...d.rows].map((r,ri)=>`<row r="${ri+1}">`+r.map((v,ci)=>v===null||v===''?'':typeof v==='number'?`<c r="${cn(ci)}${ri+1}"><v>${v}</v></c>`:`<c r="${cn(ci)}${ri+1}" t="inlineStr"><is><t>${x(v)}</t></is></c>`).join('')+'</row>').join('');
+ const H='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>',N='http://schemas.openxmlformats.org/';
+ return zip([
+  ['[Content_Types].xml',H+`<Types xmlns="${N}package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>`],
+  ['_rels/.rels',H+`<Relationships xmlns="${N}package/2006/relationships"><Relationship Id="rId1" Type="${N}officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`],
+  ['xl/workbook.xml',H+`<workbook xmlns="${N}spreadsheetml/2006/main" xmlns:r="${N}officeDocument/2006/relationships"><sheets><sheet name="${d.sheet}" sheetId="1" r:id="rId1"/></sheets></workbook>`],
+  ['xl/_rels/workbook.xml.rels',H+`<Relationships xmlns="${N}package/2006/relationships"><Relationship Id="rId1" Type="${N}officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>`],
+  ['xl/worksheets/sheet1.xml',H+`<worksheet xmlns="${N}spreadsheetml/2006/main"><cols><col min="2" max="2" width="24" customWidth="1"/></cols><sheetData>${rows}</sheetData></worksheet>`]])}
+function draw(d){
+ const S=2,m=document.createElement('canvas').getContext('2d');m.font='600 20px system-ui,sans-serif';
+ const nc=d.head.length,pi=d.pi,nw=Math.ceil(Math.min(340,Math.max(190,...d.rows.map(r=>m.measureText(String(r[1])).width+30))));
+ const hw=h=>Math.max(...h.split(' ').map(w=>(m.font='700 15px system-ui,sans-serif',m.measureText(w).width)));
+ const cw=d.head.map((h,i)=>i===0?72:i===1?nw:Math.ceil(Math.max(64,hw(h)+28)));
+ const W=Math.max(640,cw.reduce((a,b)=>a+b,0)+40),HH=96,HR=64,RH=54,H=HH+HR+RH*d.rows.length+56;
+ const c=document.createElement('canvas');c.width=W*S;c.height=H*S;
+ const g=c.getContext('2d');g.scale(S,S);g.textBaseline='middle';
+ g.fillStyle='#fff';g.fillRect(0,0,W,H);
+ const gr=g.createLinearGradient(0,0,W,0);gr.addColorStop(0,'#3b5bdb');gr.addColorStop(1,'#7048e8');
+ g.fillStyle=gr;g.fillRect(0,0,W,HH);
+ g.fillStyle='#fff';g.font='700 28px system-ui,sans-serif';g.fillText(d.title,20,38,W-40);
+ g.globalAlpha=.85;g.font='16px system-ui,sans-serif';g.fillText(d.sub,20,70,W-40);g.globalAlpha=1;
+ const X=i=>20+cw.slice(0,i).reduce((a,b)=>a+b,0);
+ const cell=(v,i,y,font,col)=>{g.font=font;g.fillStyle=col;if(i>=2){g.textAlign='right';g.fillText(v,X(i)+cw[i]-12,y+RH/2)}else{g.textAlign='left';g.fillText(v,X(i)+(i?8:14),y+RH/2,cw[i]-16)}};
+ const hdr=(h,i)=>{g.font='700 15px system-ui,sans-serif';g.fillStyle='#3b4a8a';const ls=[];let l='';const mw=cw[i]-(i>=2?20:16);
+  h.split(' ').forEach(w=>{const t=l?l+' '+w:w;if(l&&g.measureText(t).width>mw){ls.push(l);l=w}else l=t});ls.push(l);
+  g.textAlign=i>=2?'right':'left';const x=i>=2?X(i)+cw[i]-12:X(i)+(i?8:14);
+  ls.forEach((t,k)=>g.fillText(t,x,HH+HR/2+(k-(ls.length-1)/2)*19))};
+ let y=HH;g.fillStyle='#dfe6ff';g.fillRect(0,y,W,HR);d.head.forEach(hdr);y=HH+HR-RH;
+ d.rows.forEach((r,ri)=>{y+=RH;g.fillStyle=r[0]===1&&r[pi]>0?'#fff4c2':ri%2?'#f4f6ff':'#fff';g.fillRect(0,y,W,RH);
+  r.forEach((v,i)=>{const txt=v===null?'–':String(v),med=['','#ffd43b','#ced4da','#f0a868'][r[0]];
+   if(i===0&&med&&r[pi]>0){g.fillStyle=med;g.beginPath();g.arc(X(0)+28,y+RH/2,17,0,7);g.fill();g.textAlign='center';g.font='700 18px system-ui,sans-serif';g.fillStyle='#2b2b2b';g.fillText(txt,X(0)+28,y+RH/2)}
+   else if(i===pi)cell(txt,i,y,'700 20px system-ui,sans-serif','#3b5bdb');
+   else cell(txt,i,y,i===1?'600 20px system-ui,sans-serif':'18px system-ui,sans-serif','#17203a')})});
+ g.textAlign='left';g.fillStyle='#8a97a8';g.font='14px system-ui,sans-serif';g.fillText('Doubles Tournament app',20,H-24);
+ return{c,W,H,S}}
+function pdf(j,g){
+ const e=new TextEncoder(),ch=[],of=[];let n=0;
+ const put=x=>{const b=typeof x==='string'?e.encode(x):x;ch.push(b);n+=b.length};
+ const ob=(i,s)=>{of[i]=n;put(i+' 0 obj\n'+s+'\nendobj\n')};
+ put('%PDF-1.4\n');ob(1,'<</Type/Catalog/Pages 2 0 R>>');ob(2,'<</Type/Pages/Kids[3 0 R]/Count 1>>');
+ ob(3,`<</Type/Page/Parent 2 0 R/MediaBox[0 0 ${g.W} ${g.H}]/Resources<</XObject<</I 4 0 R>>>>/Contents 5 0 R>>`);
+ of[4]=n;put(`4 0 obj\n<</Type/XObject/Subtype/Image/Width ${g.W*g.S}/Height ${g.H*g.S}/ColorSpace/DeviceRGB/BitsPerComponent 8/Filter/DCTDecode/Length ${j.length}>>\nstream\n`);put(j);put('\nendstream\nendobj\n');
+ const cs=`q ${g.W} 0 0 ${g.H} 0 0 cm /I Do Q`;ob(5,`<</Length ${cs.length}>>\nstream\n${cs}\nendstream`);
+ const x=n;put('xref\n0 6\n0000000000 65535 f \n');for(let i=1;i<6;i++)put(String(of[i]).padStart(10,'0')+' 00000 n \n');
+ put(`trailer\n<</Size 6/Root 1 0 R>>\nstartxref\n${x}\n%%EOF`);
+ const o=new Uint8Array(n);let p=0;ch.forEach(b=>{o.set(b,p);p+=b.length});return o}
+const b64=u=>{let s='';for(let i=0;i<u.length;i+=0x8000)s+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000));return btoa(s)};
+const u8=url=>Uint8Array.from(atob(url.split(',')[1]),c=>c.charCodeAt(0));
+function saveFile(name,mime,u){
+ if(window.Android&&Android.save){Android.save(name,mime,b64(u));return}
+ const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([u],{type:mime}));a.download=name;document.body.appendChild(a);a.click();a.remove();toast('Saved '+name)}
+function exportTable(kind,fmt){
+ try{
+  const d=kind==='all'?aData():tData(T()),f=d.name.replace(/[\\/:*?"<>|\s]+/g,'_');
+  const q=v=>{v=v===null?'':String(v);return /[",\r\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
+  if(fmt==='csv')saveFile(f+'.csv','text/csv',new TextEncoder().encode('\ufeff'+[d.head,...d.rows].map(r=>r.map(q).join(',')).join('\r\n')));
+  else if(fmt==='xlsx')saveFile(f+'.xlsx','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',xlsx(d));
+  else{const g=draw(d);
+   if(fmt==='png')saveFile(f+'.png','image/png',u8(g.c.toDataURL('image/png')));
+   else saveFile(f+'.pdf','application/pdf',pdf(u8(g.c.toDataURL('image/jpeg',.92)),g))}
+ }catch(e){toast('Export failed: '+e.message)}}
+
+/* ---- backup and transfer between phones ---- */
+const prog=t=>t.rounds.filter(r=>r.closed).length+(t.done?.5:0);
+function okT(t){
+ const n=t&&Array.isArray(t.players)?t.players.length:-1,I=i=>Number.isInteger(i)&&i>=0&&i<n,P=a=>Array.isArray(a)&&a.length===2&&a.every(I);
+ return n>=4&&typeof t.id==='number'&&typeof t.name==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(t.date)&&t.players.every(x=>typeof x==='string')&&Array.isArray(t.rounds)
+  &&t.rounds.every(r=>r&&Array.isArray(r.matches)&&Array.isArray(r.sitting)&&r.sitting.every(I)&&r.matches.every(m=>m&&P(m.a)&&P(m.b)&&[m.sa,m.sb].every(v=>v===null?!r.closed:Number.isInteger(v)&&v>=0)))
+  &&(t.done||(t.rounds.length>0&&!t.rounds[t.rounds.length-1].closed))}
+const clean=t=>({id:t.id,name:t.name.slice(0,80),date:t.date,players:t.players.slice(),done:!!t.done,ex:!!t.ex,lvl:Math.max(0,parseInt(t.lvl)||0),
+ note:t.done&&typeof t.note==='string'?esc(t.note.slice(0,200)):undefined,
+ rounds:t.rounds.map(r=>({closed:!!r.closed,sitting:r.sitting.slice(),matches:r.matches.map(m=>({a:m.a.slice(),b:m.b.slice(),sa:m.sa,sb:m.sb}))}))});
+function exportAll(){
+ if(!db.t.length)return toast('Nothing to export yet');
+ const j=JSON.stringify({app:'doubles-tournament',v:1,exported:new Date().toISOString(),t:db.t});
+ saveFile('DoublesTournament_backup_'+new Date().toISOString().slice(0,10)+'.json','application/json',new TextEncoder().encode(j))}
+function importFile(inp){
+ const f=inp.files[0];inp.value='';if(!f)return;
+ if(f.size>5e6)return toast('That file is too large to be a backup');
+ const r=new FileReader();
+ r.onload=()=>{try{
+  const j=JSON.parse(String(r.result).replace(/^\ufeff/,''));
+  if(!j||j.app!=='doubles-tournament'||!Array.isArray(j.t))throw 0;
+  const ts=[...new Map(j.t.filter(okT).map(clean).map(t=>[t.id,t])).values()];
+  if(!ts.length)throw 0;
+  pending={t:ts,skipped:j.t.length-ts.length};go('imp')
+ }catch(e){toast('That is not a valid Doubles Tournament backup file')}};
+ r.onerror=()=>toast('Could not read that file');r.readAsText(f)}
+function vImp(){
+ if(!pending){view={n:'home'};return vHome()}
+ const p=pending,st=t=>{const l=db.t.find(x=>x.id===t.id);return!l?['new','done']:prog(t)>prog(l)?['further along','live']:['already here','off']};
+ const n=p.t.length,c={};p.t.forEach(t=>{const k=st(t)[0];c[k]=(c[k]||0)+1});
+ return back+'<h1>Import data</h1></div>'+`<div class=card><h2>${n} tournament${n===1?'':'s'} found</h2><p class=mu>${c['new']||0} new, ${c['further along']||0} further along than on this phone, ${c['already here']||0} already here.${p.skipped?' '+p.skipped+' unreadable entries were skipped.':''}</p>
+ <button onclick="doImport('merge')">Add to this phone</button><p class=mu>Keeps everything already here, then adds new tournaments and updates ones that are further along.</p>
+ <button class="${armed==='rep'?'arm':'danger'}" onclick="arm('rep')">${armed==='rep'?'Tap again to replace everything':'Replace all data on this phone'}</button>
+ <button class=sec onclick="pending=null;go('home')">Cancel</button></div><div class=card>${p.t.map(t=>`<div style="padding:6px 0"><b>${esc(t.name)}</b> <span class="tag ${st(t)[1]}">${st(t)[0]}</span><div class=mu>${t.date}, ${t.players.length} players</div></div>`).join('')}</div>`}
+function doImport(mode){
+ const p=pending;
+ if(mode==='replace')db.t=p.t.slice();
+ else p.t.forEach(t=>{const i=db.t.findIndex(x=>x.id===t.id);if(i<0)db.t.push(t);else if(prog(t)>prog(db.t[i]))db.t[i]=t});
+ db.t.sort((a,b)=>a.id-b.id);save();pending=null;toast('Import complete');go('home')}
+act.rep=()=>doImport('replace');
+function render(){$('#app').innerHTML={home:vHome,new:vNew,t:vT,all:vAll,imp:vImp}[view.n]()}
+render();
+</script></body></html>
