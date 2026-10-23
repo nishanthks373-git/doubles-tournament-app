@@ -2,11 +2,19 @@ plugins { id 'com.android.application' }
 android {
     namespace 'com.doubles.tournament'
     compileSdk 34
+    signingConfigs {
+        debug {
+            storeFile file('doubles.keystore')
+            storePassword 'doubles123'
+            keyAlias 'doubles'
+            keyPassword 'doubles123'
+        }
+    }
     defaultConfig {
         applicationId 'com.doubles.tournament'
         minSdk 29
         targetSdk 34
-        versionCode 1
+        versionCode (System.getenv('GITHUB_RUN_NUMBER') ?: '1').toInteger()
         versionName '1.0'
     }
 }
