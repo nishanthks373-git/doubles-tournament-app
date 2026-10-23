@@ -67,8 +67,8 @@ function toast(m){const e=$('#toast');e.textContent=m;e.style.opacity=1;clearTim
 /* ---- scoring ---- */
 function stat(t){const s=t.players.map(()=>({pw:0,pl:0,gp:0,gw:0,gl:0}));
  t.rounds.forEach(r=>r.closed&&r.matches.forEach(m=>[[m.a,m.sa,m.sb],[m.b,m.sb,m.sa]].forEach(([tm,f,a])=>tm.forEach(i=>{const x=s[i];x.pw+=f;x.pl+=a;x.gp++;if(f>a)x.gw++;else if(f<a)x.gl++}))));return s}
-function standings(t){const p=stat(t);return t.players.map((n,i)=>({n,i,...p[i],pts:p[i].pw})).sort((a,b)=>b.pts-a.pts||a.n.localeCompare(b.n))}
-const winners=t=>{const s=standings(t);return s.filter(x=>x.pts===s[0].pts)};
+function standings(t){const p=stat(t);return t.players.map((n,i)=>{const x=p[i],g=x.gp?x.pw/x.gp:0;return{n,i,...x,pts:x.pw,ppg:Math.round(g*100)/100,k:Math.round(g*10000)}}).sort((a,b)=>b.k-a.k||b.pw-a.pw||a.n.localeCompare(b.n))}
+const winners=t=>{const s=standings(t);return s.filter(x=>x.k===s[0].k)};
 
 /* ---- random round: all-new partners first, then least-repeated; opponents mixed ---- */
 function makeRound(t){
@@ -137,15 +137,15 @@ function toggleEx(id){const t=db.t.find(x=>x.id===id);t.ex=!t.ex;save();render()
 
 /* ---- views ---- */
 const tn=(t,p)=>p.map(i=>esc(t.players[i])).join(' &amp; ');
-const rankOf=(rows,r)=>rows.findIndex(x=>x.pts===r.pts)+1;
+const rankOf=(rows,r)=>rows.findIndex(x=>x.k===r.k)+1;
 const PAL=['#3b5bdb','#e8590c','#2f9e44','#d6336c','#7048e8','#f08c00'];
 const rkb=(k,p)=>`<span class="rk ${k<4&&p>0?'rk'+k:''}">${k}</span>`;
-function tbl(rows){return '<div class=scr><table><tr><th>Rank</th><th>Player</th><th class=r>Points won</th><th class=r>Points lost</th><th class=r>Games played</th><th class=r>Games won</th><th class=r>Games lost</th></tr>'+rows.map(r=>{const k=rankOf(rows,r);return `<tr class="${k===1&&r.pts>0?'top1':''}"><td>${rkb(k,r.pts)}</td><td>${esc(r.n)}</td><td class=r><b class=pt>${r.pw}</b></td><td class=r>${r.pl}</td><td class=r>${r.gp}</td><td class=r>${r.gw}</td><td class=r>${r.gl}</td></tr>`}).join('')+'</table></div>'}
+function tbl(rows){return '<div class=scr><table><tr><th>Rank</th><th>Player</th><th class=r>Points won</th><th class=r>Points lost</th><th class=r>Games played</th><th class=r>Games won</th><th class=r>Games lost</th><th class=r>Points per game</th></tr>'+rows.map(r=>{const k=rankOf(rows,r);return `<tr class="${k===1&&r.pts>0?'top1':''}"><td>${rkb(k,r.pts)}</td><td>${esc(r.n)}</td><td class=r>${r.pw}</td><td class=r>${r.pl}</td><td class=r>${r.gp}</td><td class=r>${r.gw}</td><td class=r>${r.gl}</td><td class=r><b class=pt>${r.ppg}</b></td></tr>`}).join('')+'</table></div>'}
 const back='<div class=top><button class=ghost onclick="go(\'home\')">&lsaquo; Back</button>';
 function vHome(){
  let h='<div class=top><h1>🏸 Doubles Tournament</h1></div><button onclick="newT()">New tournament</button><button class=sec onclick="go(\'all\')">🏆 All-time leaderboard</button><h2 style="margin:20px 0 8px">Your tournaments</h2>';
  if(!db.t.length)h+='<p class=mu>Nothing here yet. Tap New tournament to add players and start round 1.</p>';
- db.t.slice().reverse().forEach((t,i)=>{h+=`<div class="card item" style="border-left-color:${PAL[i%6]}" onclick="go('t',${t.id})"><b>${esc(t.name)}</b><div class=mu>${t.date}, ${t.players.length} players</div><div class="tag ${t.done?'done':'live'}">${t.done?'Finished: '+winners(t).map(x=>esc(x.n)).join(', ')+' ('+standings(t)[0].pts+' pts)':'In progress, round '+t.rounds.length}</div>${t.ex?'<div class="tag off">Not in all-time leaderboard</div>':''}</div>`});
+ db.t.slice().reverse().forEach((t,i)=>{h+=`<div class="card item" style="border-left-color:${PAL[i%6]}" onclick="go('t',${t.id})"><b>${esc(t.name)}</b><div class=mu>${t.date}, ${t.players.length} players</div><div class="tag ${t.done?'done':'live'}">${t.done?'Finished: '+winners(t).map(x=>esc(x.n)).join(', ')+' ('+standings(t)[0].ppg+' pts/game)':'In progress, round '+t.rounds.length}</div>${t.ex?'<div class="tag off">Not in all-time leaderboard</div>':''}</div>`});
  h+='<div class=card><h2>Backup and transfer</h2><p class=mu>Save every tournament and the leaderboard to one file, or load a file made on another phone.</p><button class=c4 onclick="exportAll()">Export all data</button><button class=sec onclick="document.getElementById(\'imp\').click()">Import data from a file</button><input type=file id=imp hidden onchange="importFile(this)"></div>';
  return h}
 function namesHtml(){return draft.names.slice(0,draft.count).map((n,i)=>`<input style="margin-bottom:8px" value="${esc(n)}" placeholder="Player ${i+1}" oninput="draft.names[${i}]=this.value">`).join('')}
@@ -160,7 +160,7 @@ function vT(){
  const t=T();if(!t){view={n:'home'};return vHome()}
  const last=t.rounds[t.rounds.length-1],st=standings(t);
  let h=back+`<h1>${esc(t.name)}</h1></div>`;
- if(t.done){const w=winners(t);h+=`<div class="card win">🏆 ${w.length>1?'Winners':'Winner'}: <b>${w.map(x=>esc(x.n)).join(' &amp; ')}</b> with ${st[0].pts} points</div>`;if(t.note)h+=`<p class=mu>${t.note}</p>`}
+ if(t.done){const w=winners(t);h+=`<div class="card win">🏆 ${w.length>1?'Winners':'Winner'}: <b>${w.map(x=>esc(x.n)).join(' &amp; ')}</b> with ${st[0].ppg} points per game</div>`;if(t.note)h+=`<p class=mu>${t.note}</p>`}
  else{
   h+=`<div class=card><h2><span class=rnd>Round ${t.rounds.length}</span></h2>`+last.matches.map((m,i)=>`<div class=match>
    <div class="ln a"><span class=tm>${tn(t,m.a)}</span><input type=number inputmode=numeric min=0 value="${m.sa===null?'':m.sa}" oninput="sc(${i},'a',this.value)"></div>
@@ -168,7 +168,7 @@ function vT(){
    <div class="ln b"><span class=tm>${tn(t,m.b)}</span><input type=number inputmode=numeric min=0 value="${m.sb===null?'':m.sb}" oninput="sc(${i},'b',this.value)"></div></div>`).join('');
   if(last.sitting.length)h+=`<p class=mu>Sitting out this round: ${last.sitting.map(i=>esc(t.players[i])).join(', ')}</p>`;
   h+=`<button onclick="complete()">Complete round and draw next</button></div>`}
- h+=`<div class=card><h2>${t.done?'Final standings':'Standings'}</h2>${tbl(st)}${expRow('t')}</div>`;
+ h+=`<div class=card><h2>${t.done?'Final standings':'Standings'}</h2>${tbl(st)}<p class=mu style="margin:8px 0 0">Ranked by points per game, so players with fewer games are not at a disadvantage.</p>${expRow('t')}</div>`;
  const hist=t.rounds.map((r,i)=>[r,i]).filter(x=>x[0].closed).reverse().map(([r,i])=>`<details ${openR.has(t.id+':'+i)?'open':''} ontoggle="tg('${t.id}:${i}',this.open)"><summary>Round ${i+1}</summary>${r.matches.map((m,mi)=>t.done?`<div class=mu style="padding:4px 0">${tn(t,m.a)} <b>${m.sa}</b> to <b>${m.sb}</b> ${tn(t,m.b)}</div>`:`<div class=match><div class="ln a"><span class=tm>${tn(t,m.a)}</span><input type=number inputmode=numeric min=0 value="${m.sa}" onchange="scPast(${i},${mi},'a',this.value)"></div><div class=vs>versus</div><div class="ln b"><span class=tm>${tn(t,m.b)}</span><input type=number inputmode=numeric min=0 value="${m.sb}" onchange="scPast(${i},${mi},'b',this.value)"></div></div>`).join('')}${r.sitting.length?`<div class=mu>Sat out: ${r.sitting.map(k=>esc(t.players[k])).join(', ')}</div>`:''}</details>`).join('');
  if(hist)h+=`<div class=card><h2>Round results</h2>${t.done?'':'<p class=mu>Open a round to correct its scores. Standings update right away.</p>'}${hist}</div>`;
  if(!t.done)h+=`<button class="${armed==='end'?'arm':'warn'}" onclick="arm('end')">${armed==='end'?'Tap again to finish tournament':'Finish tournament'}</button><p class=mu>Finishing counts the current round only if every score is entered.</p>`;
@@ -179,9 +179,9 @@ function vT(){
 const WK=4,OPP=[0.8,1.2],TF=[0.02,1.2],PF=[0.02,1.1];
 function allRows(){
  const ts=db.t.filter(t=>!t.ex),m={},K=n=>n.toLowerCase();
- ts.forEach(t=>{const st=standings(t),top=st.length?st[0].pts:0;
+ ts.forEach(t=>{const st=standings(t),top=st.length?st[0].k:0;
   st.forEach(p=>{const e=m[K(p.n)]||(m[K(p.n)]={n:p.n,pts:0,pl:0,gp:0,gw:0,gl:0,tp:0,w:0,wp:0});
-   e.pts+=p.pw;e.pl+=p.pl;e.gp+=p.gp;e.gw+=p.gw;e.gl+=p.gl;if(p.gp>0)e.tp++;if(t.done&&p.pts===top&&top>0)e.w++})});
+   e.pts+=p.pw;e.pl+=p.pl;e.gp+=p.gp;e.gw+=p.gw;e.gl+=p.gl;if(p.gp>0)e.tp++;if(t.done&&p.k===top&&top>0&&p.gp>0)e.w++})});
  const R=Object.values(m),TP=R.reduce((a,e)=>a+e.pts,0),TG=R.reduce((a,e)=>a+e.gp,0),avg=TG?TP/TG:0;
  /* opponent strength: points per game vs the overall average (1 = average), pulled toward 1 for players with few games */
  const sp=n=>{const e=m[K(n)];return avg?((e.pts+WK*avg)/(e.gp+WK))/avg:1};
@@ -190,17 +190,17 @@ function allRows(){
    const o=Math.min(OPP[1],Math.max(OPP[0],op.reduce((a,i)=>a+sp(t.players[i]),0)/2));
    tm.forEach(i=>{const k=K(t.players[i]);w[k]=(w[k]||0)+f*o;g[k]=(g[k]||0)+1})})));
   Object.keys(w).forEach(k=>m[k].wp+=w[k]*Math.min(TF[1],1+TF[0]*(g[k]-1)))});
- return R.map(e=>({...e,ppg:e.gp?Math.round(e.pts/e.gp*100)/100:0,wpts:Math.round(e.wp*Math.min(PF[1],1+PF[0]*(Math.max(e.tp,1)-1))*10)/10})).sort((a,b)=>b.pts-a.pts||a.n.localeCompare(b.n))}
+ return R.map(e=>({...e,k:e.gp?Math.round(e.pts/e.gp*10000):0,ppg:e.gp?Math.round(e.pts/e.gp*100)/100:0,wpts:Math.round(e.wp*Math.min(PF[1],1+PF[0]*(Math.max(e.tp,1)-1))*10)/10})).sort((a,b)=>b.k-a.k||b.pts-a.pts||a.n.localeCompare(b.n))}
 function vAll(){
  const rows=allRows(),inc=db.t.filter(t=>!t.ex).length;
  const sw=db.t.length?`<div class=card><h2>Tournaments counted (${inc} of ${db.t.length})</h2>${db.t.slice().reverse().map(t=>`<label class=sw><input type=checkbox ${t.ex?'':'checked'} onchange="toggleEx(${t.id})"><span><b>${esc(t.name)}</b><br><span class=mu>${t.date}, ${t.done?'finished':'in progress'}</span></span></label>`).join('')}</div>`:'';
- return back+'<h1>🏆 All-time leaderboard</h1></div>'+(rows.length?`<div class=card><div class=scr><table><tr><th>Rank</th><th>Player</th><th class=r>Total Points</th><th class=r>Tournaments played</th><th class=r>Tournaments won</th><th class=r>Points won</th><th class=r>Points lost</th><th class=r>Games played</th><th class=r>Games won</th><th class=r>Games lost</th><th class=r>Points per game</th><th class=r>Weighted points</th></tr>${rows.map(r=>{const k=rankOf(rows,r);return `<tr class="${k===1&&r.pts>0?'top1':''}"><td>${rkb(k,r.pts)}</td><td>${esc(r.n)}</td><td class=r><b class=pt>${r.pts}</b></td><td class=r>${r.tp}</td><td class=r>${r.w}</td><td class=r>${r.pts}</td><td class=r>${r.pl}</td><td class=r>${r.gp}</td><td class=r>${r.gw}</td><td class=r>${r.gl}</td><td class=r>${r.ppg}</td><td class=r>${r.wpts}</td></tr>`}).join('')}</table></div>${expRow('all')}</div><p class=mu>Players are matched by name. Only completed rounds count. Tournaments won counts finished tournaments. A drawn game counts as played, but not as won or lost. Points per game is Points won divided by games played. Rank follows Total Points.</p><div class=card><details><summary>How weighted points are calculated</summary><p class=mu>Each game starts with the points your team won. That is multiplied by 0.8 to 1.2 for the strength of the two opponents (their points per game compared with everyone's average, so playing top players counts more; players with few games are treated as closer to average). For each tournament the total is multiplied by up to 1.2 for how many rounds you played in it (+2% per round after the first). The grand total is multiplied by up to 1.1 for how many tournaments you played (+2% per tournament after the first).</p></details></div>`:`<p class=mu>${db.t.length?'No tournaments are counted. Tick one below to include it.':'Complete a round in any tournament to see totals here.'}</p>`)+sw}
+ return back+'<h1>🏆 All-time leaderboard</h1></div>'+(rows.length?`<div class=card><div class=scr><table><tr><th>Rank</th><th>Player</th><th class=r>Total Points</th><th class=r>Tournaments played</th><th class=r>Tournaments won</th><th class=r>Points won</th><th class=r>Points lost</th><th class=r>Games played</th><th class=r>Games won</th><th class=r>Games lost</th><th class=r>Points per game</th><th class=r>Weighted points</th></tr>${rows.map(r=>{const k=rankOf(rows,r);return `<tr class="${k===1&&r.pts>0?'top1':''}"><td>${rkb(k,r.pts)}</td><td>${esc(r.n)}</td><td class=r>${r.pts}</td><td class=r>${r.tp}</td><td class=r>${r.w}</td><td class=r>${r.pts}</td><td class=r>${r.pl}</td><td class=r>${r.gp}</td><td class=r>${r.gw}</td><td class=r>${r.gl}</td><td class=r><b class=pt>${r.ppg}</b></td><td class=r>${r.wpts}</td></tr>`}).join('')}</table></div>${expRow('all')}</div><p class=mu>Players are matched by name. Only completed rounds count. Tournaments won counts finished tournaments where the player had the top points per game. A drawn game counts as played, but not as won or lost. Points per game is Points won divided by games played. Players are ranked by Points per game, so players who played fewer games are not at a disadvantage. Ties share a rank.</p><div class=card><details><summary>How weighted points are calculated</summary><p class=mu>Each game starts with the points your team won. That is multiplied by 0.8 to 1.2 for the strength of the two opponents (their points per game compared with everyone's average, so playing top players counts more; players with few games are treated as closer to average). For each tournament the total is multiplied by up to 1.2 for how many rounds you played in it (+2% per round after the first). The grand total is multiplied by up to 1.1 for how many tournaments you played (+2% per tournament after the first).</p></details></div>`:`<p class=mu>${db.t.length?'No tournaments are counted. Tick one below to include it.':'Complete a round in any tournament to see totals here.'}</p>`)+sw}
 
 /* ---- export: CSV, Excel (.xlsx), PDF, image; all built offline ---- */
 function tData(t){const st=standings(t),n=t.rounds.filter(r=>r.closed).length;
- return{name:t.name+'_standings',title:t.name,sub:`Standings after ${n} round${n===1?'':'s'}, ${t.date}`,sheet:'Standings',pi:2,
-  head:['Rank','Player','Points won','Points lost','Games played','Games won','Games lost'],rows:st.map(p=>[rankOf(st,p),p.n,p.pw,p.pl,p.gp,p.gw,p.gl])}}
-function aData(){const r=allRows();return{name:'All-time_leaderboard',title:'All-time leaderboard',sub:(n=>`Across ${n} tournament${n===1?'':'s'}`)(db.t.filter(t=>!t.ex).length),sheet:'Leaderboard',pi:2,
+ return{name:t.name+'_standings',title:t.name,sub:`Standings after ${n} round${n===1?'':'s'}, ${t.date}`,sheet:'Standings',pi:7,
+  head:['Rank','Player','Points won','Points lost','Games played','Games won','Games lost','Points per game'],rows:st.map(p=>[rankOf(st,p),p.n,p.pw,p.pl,p.gp,p.gw,p.gl,p.ppg])}}
+function aData(){const r=allRows();return{name:'All-time_leaderboard',title:'All-time leaderboard',sub:(n=>`Across ${n} tournament${n===1?'':'s'}`)(db.t.filter(t=>!t.ex).length),sheet:'Leaderboard',pi:10,
  head:['Rank','Player','Total Points','Tournaments played','Tournaments won','Points won','Points lost','Games played','Games won','Games lost','Points per game','Weighted points'],
  rows:r.map(x=>[rankOf(r,x),x.n,x.pts,x.tp,x.w,x.pts,x.pl,x.gp,x.gw,x.gl,x.ppg,x.wpts])}}
 const crcT=(()=>{const t=[];for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0}return t})();
