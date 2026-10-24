@@ -3,8 +3,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Doubles Tournament</title>
 <style>
-:root{--bg:#eef1fb;--card:#fff;--tx:#17203a;--mu:#5f6b8a;--ac:#3b5bdb;--on:#fff;--tint:#e5eafd;--bd:#d9def2;--wn:#d6336c;--ta:#1c7ed6;--tb:#e8590c;--g1:#3b5bdb;--g2:#7048e8;--hl:#fff4c2}
-@media(prefers-color-scheme:dark){:root{--bg:#0f1426;--card:#1a2140;--tx:#eaeefc;--mu:#98a3c7;--ac:#8ea2ff;--on:#0f1426;--tint:#27305a;--bd:#2c3566;--wn:#ff7aa8;--ta:#74c0fc;--tb:#ffa94d;--g1:#4263eb;--g2:#7950f2;--hl:#3b3a22}}
+:root{--bg:#eef1fb;--card:#fff;--tx:#17203a;--mu:#5f6b8a;--ac:#3b5bdb;--on:#fff;--tint:#e5eafd;--bd:#d9def2;--wn:#d6336c;--ta:#1c7ed6;--tb:#e8590c;--g1:#3b5bdb;--g2:#7048e8;--hl:#fff4c2;--ql:#e6fcf5}
+@media(prefers-color-scheme:dark){:root{--bg:#0f1426;--card:#1a2140;--tx:#eaeefc;--mu:#98a3c7;--ac:#8ea2ff;--on:#0f1426;--tint:#27305a;--bd:#2c3566;--wn:#ff7aa8;--ta:#74c0fc;--tb:#ffa94d;--g1:#4263eb;--g2:#7950f2;--hl:#3b3a22;--ql:#12362d}}
 *{box-sizing:border-box}
 body{margin:0;font:16px/1.4 system-ui,sans-serif;background:var(--bg);color:var(--tx);padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
 .wrap{max-width:560px;margin:0 auto;padding:14px 14px 40px}
@@ -61,6 +61,15 @@ details{padding:8px 0;border-top:1px solid var(--bd)}summary{font-weight:600}
 .gi{flex:1;min-width:0}.gi .mu{font-size:.85rem}
 .wl{flex:none;min-width:48px;text-align:center;border-radius:10px;padding:2px 6px;font-size:.8rem;font-weight:700}
 .wl.W{background:#d3f9d8;color:#1b6b2f}.wl.L{background:#ffe3e3;color:#a61e4d}.wl.D{background:#e9ecef;color:#495057}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:112px;margin:0;padding:12px;border-radius:16px;color:#fff;font-size:1.05rem}
+.tile .em{font-size:2.1rem;line-height:1.15}.tile .sub{font-size:.8rem;font-weight:500;opacity:.92}
+.tile.more{background:var(--tint);color:var(--ac)}
+.tile.wide{align-items:flex-start;text-align:left;min-height:0;background:linear-gradient(90deg,var(--g1),var(--g2));margin-top:10px;width:100%;padding:14px 16px}
+.tile.wide b{font-size:1.05rem}
+.pair{display:flex;gap:8px;align-items:center;margin-bottom:8px}.pair .mu{flex:none;width:54px}
+tr.qual td{background:var(--ql)}tr.qual td:first-child{box-shadow:inset 4px 0 #12b886}
+.scr tr.qual td{background:var(--ql)}
 </style></head><body>
 <div class="wrap" id="app"></div><div id="toast"></div>
 <script>
@@ -68,7 +77,7 @@ const $=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let db;try{db=JSON.parse(localStorage.getItem('dt_v1'))||{t:[]}}catch(e){db={t:[]}}
 const save=()=>{try{localStorage.setItem('dt_v1',JSON.stringify(db))}catch(e){toast('Could not save data')}};
-let view={n:'home'},draft,armed=null,pending=null;
+let view={n:'home'},draft,armed=null,pending=null,ctx={sport:'badminton',mode:'rot'},d2=null,showMore=false;
 const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
 const T=()=>db.t.find(t=>t.id===view.id);
 function toast(m){const e=$('#toast');e.textContent=m;e.style.opacity=1;clearTimeout(toast.h);toast.h=setTimeout(()=>e.style.opacity=0,2600)}
@@ -115,7 +124,9 @@ function layout(teams,sitting,oc,k){
 
 /* ---- actions ---- */
 function go(n,id){view={n,id};armed=null;render();scrollTo(0,0)}
-window.goBack=()=>{if(view.n==='home')return false;go('home');return true};
+const PARENT={hub:'mode',mode:'home',fmt:'hub',newx:'fmt',new:'hub',t:'hub',x:'hub',all:'hub',soon:'home',assign:'home',imp:'home'};
+window.goBack=()=>{if(view.n==='home')return false;go(PARENT[view.n]||'home');return true};
+function backH(){return '<div class=top><button class=ghost onclick="goBack()">&lsaquo; Back</button>'}
 function newT(){draft={name:'',count:8,names:Array(8).fill('')};go('new')}
 function setCount(v){const c=Math.min(40,Math.max(0,parseInt(v)||0));draft.count=c;while(draft.names.length<c)draft.names.push('');$('#names').innerHTML=namesHtml()}
 function start(){
@@ -123,7 +134,7 @@ function start(){
  if(draft.count<4)return toast('You need at least 4 players');
  if(names.some(x=>!x))return toast('Enter a name for every player');
  if(new Set(names.map(x=>x.toLowerCase())).size<names.length)return toast('Player names must be different');
- const t={id:Date.now(),name:draft.name.trim()||'Tournament '+(db.t.length+1),date:new Date().toISOString().slice(0,10),players:names,rounds:[],done:false};
+ const t={id:Date.now(),name:draft.name.trim()||'Tournament '+(sel().length+1),date:new Date().toISOString().slice(0,10),sport:ctx.sport,mode:'rot',players:names,rounds:[],done:false};
  t.rounds.push(makeRound(t));db.t.push(t);save();go('t',t.id)}
 function sc(i,s,v){const t=T(),r=t.rounds[t.rounds.length-1];r.matches[i]['s'+s]=v===''?null:Math.max(0,parseInt(v,10)||0);save()}
 const openR=new Set();function tg(k,o){o?openR.add(k):openR.delete(k)}
@@ -139,7 +150,7 @@ function complete(){
  save();render();scrollTo(0,0)}
 const act={
  end(){const t=T(),r=t.rounds[t.rounds.length-1];if(r.matches.every(m=>m.sa!==null&&m.sb!==null))r.closed=true;else t.rounds.pop();t.done=true;save();render()},
- del(){db.t=db.t.filter(x=>x.id!==view.id);save();go('home')}};
+ del(){db.t=db.t.filter(x=>x.id!==view.id);save();go('hub')}};
 function arm(k){if(armed===k){armed=null;act[k]()}else{armed=k;render();setTimeout(()=>{if(armed===k){armed=null;render()}},3000)}}
 
 function toggleEx(id){const t=db.t.find(x=>x.id===id);t.ex=!t.ex;save();render()}
@@ -150,7 +161,7 @@ const rankOf=(rows,r)=>rows.findIndex(x=>x.k===r.k)+1;
 /* a player's games, newest first: one tournament (tid) or every counted tournament (tid=null) */
 function gamesOf(name,tid){
  const K=name.toLowerCase(),out=[];
- db.t.filter(t=>tid===null?!t.ex:t.id===tid).forEach(t=>{
+ (tid===null?rotSel().filter(t=>!t.ex):db.t.filter(t=>t.id===tid)).forEach(t=>{
   const pi=t.players.findIndex(n=>n.toLowerCase()===K);if(pi<0)return;
   t.rounds.forEach((r,ri)=>r.closed&&r.matches.forEach(m=>{
    const mine=m.a.includes(pi)?[m.a,m.b,m.sa,m.sb]:m.b.includes(pi)?[m.b,m.a,m.sb,m.sa]:null;if(!mine)return;
@@ -170,15 +181,16 @@ const prow=(name,tid)=>`data-name="${esc(name)}" tabindex=0 role=button onclick=
 const PAL=['#3b5bdb','#e8590c','#2f9e44','#d6336c','#7048e8','#f08c00'];
 const rkb=(k,p)=>`<span class="rk ${k<4&&p>0?'rk'+k:''}">${k}</span>`;
 function tbl(rows,tid){return '<div class=scr><table><tr><th>Rank</th><th>Player</th><th class=r>Points won</th><th class=r>Points lost</th><th class=r>Games played</th><th class=r>Games won</th><th class=r>Games lost</th><th class=r>Points per game</th></tr>'+rows.map(r=>{const k=rankOf(rows,r);return `<tr class="pr ${k===1&&r.pts>0?'top1':''}" ${prow(r.n,tid)}><td>${rkb(k,r.pts)}</td><td><span class=cv>▸</span>${esc(r.n)}</td><td class=r>${r.pw}</td><td class=r>${r.pl}</td><td class=r>${r.gp}</td><td class=r>${r.gw}</td><td class=r>${r.gl}</td><td class=r><b class=pt>${r.ppg}</b></td></tr>`}).join('')+'</table></div>'}
-const back='<div class=top><button class=ghost onclick="go(\'home\')">&lsaquo; Back</button>';
-function vHome(){
- let h='<div class=top><h1>🏸 Doubles Tournament</h1></div><button onclick="newT()">New tournament</button><button class=sec onclick="go(\'all\')">🏆 All-time leaderboard</button><h2 style="margin:20px 0 8px">Your tournaments</h2>';
- if(!db.t.length)h+='<p class=mu>Nothing here yet. Tap New tournament to add players and start round 1.</p>';
- db.t.slice().reverse().forEach((t,i)=>{h+=`<div class="card item" style="border-left-color:${PAL[i%6]}" onclick="go('t',${t.id})"><b>${esc(t.name)}</b><div class=mu>${t.date}, ${t.players.length} players</div><div class="tag ${t.done?'done':'live'}">${t.done?'Finished: '+winners(t).map(x=>esc(x.n)).join(', ')+' ('+standings(t)[0].ppg+' pts/game)':'In progress, round '+t.rounds.length}</div>${t.ex?'<div class="tag off">Not in all-time leaderboard</div>':''}</div>`});
- h+='<div class=card><h2>Backup and transfer</h2><p class=mu>Save every tournament and the leaderboard to one file, or load a file made on another phone.</p><button class=c4 onclick="exportAll()">Export all data</button><button class=sec onclick="document.getElementById(\'imp\').click()">Import data from a file</button><input type=file id=imp hidden onchange="importFile(this)"></div>';
+function vHub(){
+ const [n,e]=SP[ctx.sport],rot=ctx.mode==='rot',L=sel(),u=ctx.mode==='fix'?'teams':'players';
+ let h=backH()+`<h1>${e} ${n}</h1></div><div class=mu style="margin:-6px 0 12px">${MODES[ctx.mode]}</div><button onclick="${rot?'newT()':"go('fmt')"}">New tournament</button>`+(rot?`<button class=sec onclick="go('all')">🏆 Leaderboard</button>`:'')+'<h2 style="margin:20px 0 8px">Your tournaments</h2>';
+ if(!L.length)h+='<p class=mu>Nothing here yet. Tap New tournament to get started.</p>';
+ L.slice().reverse().forEach((t,i)=>{
+  if(rot)h+=`<div class="card item" style="border-left-color:${PAL[i%6]}" onclick="go('t',${t.id})"><b>${esc(t.name)}</b><div class=mu>${t.date}, ${t.players.length} players</div><div class="tag ${t.done?'done':'live'}">${t.done?'Finished: '+winners(t).map(x=>esc(x.n)).join(', ')+' ('+standings(t)[0].ppg+' pts/game)':'In progress, round '+t.rounds.length}</div>${t.ex?'<div class="tag off">Not in leaderboard</div>':''}</div>`;
+  else{const ch=champ(t);h+=`<div class="card item" style="border-left-color:${PAL[i%6]}" onclick="go('x',${t.id})"><b>${esc(t.name)}</b><div class=mu>${t.date}, ${t.ent.length} ${u}, ${FS[t.fmt]}</div><div class="tag ${ch!==null?'done':'live'}">${ch!==null?'Champion: '+esc(t.ent[ch].n):'In progress'}</div></div>`}});
  return h}
 function namesHtml(){return draft.names.slice(0,draft.count).map((n,i)=>`<input style="margin-bottom:8px" value="${esc(n)}" placeholder="Player ${i+1}" oninput="draft.names[${i}]=this.value">`).join('')}
-function vNew(){return back+'<h1>New tournament</h1></div><div class=card>'+
+function vNew(){return backH()+'<h1>New tournament</h1></div><div class=card>'+
  `<label>Tournament name</label><input value="${esc(draft.name)}" placeholder="e.g. Sunday doubles" oninput="draft.name=this.value">
  <label>Number of players (at least 4)</label><input type=number inputmode=numeric min=4 max=40 value="${draft.count}" oninput="setCount(this.value)">
  <h2 style="margin-top:18px">Player names</h2><div id=names>${namesHtml()}</div>
@@ -188,7 +200,7 @@ const expRow=k=>`<div class=mu style="margin-top:14px">Download this table</div>
 function vT(){
  const t=T();if(!t){view={n:'home'};return vHome()}
  const last=t.rounds[t.rounds.length-1],st=standings(t);
- let h=back+`<h1>${esc(t.name)}</h1></div>`;
+ let h=backH()+`<h1>${esc(t.name)}</h1></div>`;
  if(t.done){const w=winners(t);h+=`<div class="card win">🏆 ${w.length>1?'Winners':'Winner'}: <b>${w.map(x=>esc(x.n)).join(' &amp; ')}</b> with ${st[0].ppg} points per game</div>`;if(t.note)h+=`<p class=mu>${t.note}</p>`}
  else{
   h+=`<div class=card><h2><span class=rnd>Round ${t.rounds.length}</span></h2>`+last.matches.map((m,i)=>`<div class=match>
@@ -207,7 +219,7 @@ function vT(){
 /* weighted points: tweak these numbers to change how the weighting behaves */
 const WK=4,OPP=[0.8,1.2],TF=[0.02,1.2],PF=[0.02,1.1];
 function allRows(){
- const ts=db.t.filter(t=>!t.ex),m={},K=n=>n.toLowerCase();
+ const ts=rotSel().filter(t=>!t.ex),m={},K=n=>n.toLowerCase();
  ts.forEach(t=>{const st=standings(t),top=st.length?st[0].k:0;
   st.forEach(p=>{const e=m[K(p.n)]||(m[K(p.n)]={n:p.n,pts:0,pl:0,gp:0,gw:0,gl:0,tp:0,w:0,wp:0});
    e.pts+=p.pw;e.pl+=p.pl;e.gp+=p.gp;e.gw+=p.gw;e.gl+=p.gl;if(p.gp>0)e.tp++;if(t.done&&p.k===top&&top>0&&p.gp>0)e.w++})});
@@ -221,15 +233,15 @@ function allRows(){
   Object.keys(w).forEach(k=>m[k].wp+=w[k]*Math.min(TF[1],1+TF[0]*(g[k]-1)))});
  return R.map(e=>({...e,k:e.gp?Math.round(e.pts/e.gp*10000):0,ppg:e.gp?Math.round(e.pts/e.gp*100)/100:0,wpts:Math.round(e.wp*Math.min(PF[1],1+PF[0]*(Math.max(e.tp,1)-1))*10)/10})).sort((a,b)=>b.k-a.k||b.pts-a.pts||a.n.localeCompare(b.n))}
 function vAll(){
- const rows=allRows(),inc=db.t.filter(t=>!t.ex).length;
- const sw=db.t.length?`<div class=card><h2>Tournaments counted (${inc} of ${db.t.length})</h2>${db.t.slice().reverse().map(t=>`<label class=sw><input type=checkbox ${t.ex?'':'checked'} onchange="toggleEx(${t.id})"><span><b>${esc(t.name)}</b><br><span class=mu>${t.date}, ${t.done?'finished':'in progress'}</span></span></label>`).join('')}</div>`:'';
- return back+'<h1>🏆 All-time leaderboard</h1></div>'+(rows.length?`<div class=card><div class=scr><table><tr><th>Rank</th><th>Player</th><th class=r>Total Points</th><th class=r>Tournaments played</th><th class=r>Tournaments won</th><th class=r>Points won</th><th class=r>Points lost</th><th class=r>Games played</th><th class=r>Games won</th><th class=r>Games lost</th><th class=r>Points per game</th><th class=r>Weighted points</th></tr>${rows.map(r=>{const k=rankOf(rows,r);return `<tr class="pr ${k===1&&r.pts>0?'top1':''}" ${prow(r.n,null)}><td>${rkb(k,r.pts)}</td><td><span class=cv>▸</span>${esc(r.n)}</td><td class=r>${r.pts}</td><td class=r>${r.tp}</td><td class=r>${r.w}</td><td class=r>${r.pts}</td><td class=r>${r.pl}</td><td class=r>${r.gp}</td><td class=r>${r.gw}</td><td class=r>${r.gl}</td><td class=r><b class=pt>${r.ppg}</b></td><td class=r>${r.wpts}</td></tr>`}).join('')}</table></div>${expRow('all')}</div><p class=mu>Players are matched by name. Only completed rounds count. Tournaments won counts finished tournaments where the player had the top points per game. A drawn game counts as played, but not as won or lost. Points per game is Points won divided by games played. Tap a player to see all their games. Players are ranked by Points per game, so players who played fewer games are not at a disadvantage. Ties share a rank.</p><div class=card><details><summary>How weighted points are calculated</summary><p class=mu>Each game starts with the points your team won. That is multiplied by 0.8 to 1.2 for the strength of the two opponents (their points per game compared with everyone's average, so playing top players counts more; players with few games are treated as closer to average). For each tournament the total is multiplied by up to 1.2 for how many rounds you played in it (+2% per round after the first). The grand total is multiplied by up to 1.1 for how many tournaments you played (+2% per tournament after the first).</p></details></div>`:`<p class=mu>${db.t.length?'No tournaments are counted. Tick one below to include it.':'Complete a round in any tournament to see totals here.'}</p>`)+sw}
+ const L=rotSel(),rows=allRows(),inc=L.filter(t=>!t.ex).length;
+ const sw=L.length?`<div class=card><h2>Tournaments counted (${inc} of ${L.length})</h2>${L.slice().reverse().map(t=>`<label class=sw><input type=checkbox ${t.ex?'':'checked'} onchange="toggleEx(${t.id})"><span><b>${esc(t.name)}</b><br><span class=mu>${t.date}, ${t.done?'finished':'in progress'}</span></span></label>`).join('')}</div>`:'';
+ return backH()+`<h1>🏆 ${SP[ctx.sport][0]} leaderboard</h1></div>`+(rows.length?`<div class=card><div class=scr><table><tr><th>Rank</th><th>Player</th><th class=r>Total Points</th><th class=r>Tournaments played</th><th class=r>Tournaments won</th><th class=r>Points won</th><th class=r>Points lost</th><th class=r>Games played</th><th class=r>Games won</th><th class=r>Games lost</th><th class=r>Points per game</th><th class=r>Weighted points</th></tr>${rows.map(r=>{const k=rankOf(rows,r);return `<tr class="pr ${k===1&&r.pts>0?'top1':''}" ${prow(r.n,null)}><td>${rkb(k,r.pts)}</td><td><span class=cv>▸</span>${esc(r.n)}</td><td class=r>${r.pts}</td><td class=r>${r.tp}</td><td class=r>${r.w}</td><td class=r>${r.pts}</td><td class=r>${r.pl}</td><td class=r>${r.gp}</td><td class=r>${r.gw}</td><td class=r>${r.gl}</td><td class=r><b class=pt>${r.ppg}</b></td><td class=r>${r.wpts}</td></tr>`}).join('')}</table></div>${expRow('all')}</div><p class=mu>Players are matched by name. Only completed rounds count. Tournaments won counts finished tournaments where the player had the top points per game. A drawn game counts as played, but not as won or lost. Points per game is Points won divided by games played. Tap a player to see all their games. Players are ranked by Points per game, so players who played fewer games are not at a disadvantage. Ties share a rank.</p><div class=card><details><summary>How weighted points are calculated</summary><p class=mu>Each game starts with the points your team won. That is multiplied by 0.8 to 1.2 for the strength of the two opponents (their points per game compared with everyone's average, so playing top players counts more; players with few games are treated as closer to average). For each tournament the total is multiplied by up to 1.2 for how many rounds you played in it (+2% per round after the first). The grand total is multiplied by up to 1.1 for how many tournaments you played (+2% per tournament after the first).</p></details></div>`:`<p class=mu>${L.length?'No tournaments are counted. Tick one below to include it.':'Complete a round in any tournament to see totals here.'}</p>`)+sw}
 
 /* ---- export: CSV, Excel (.xlsx), PDF, image; all built offline ---- */
 function tData(t){const st=standings(t),n=t.rounds.filter(r=>r.closed).length;
  return{name:t.name+'_standings',title:t.name,sub:`Standings after ${n} round${n===1?'':'s'}, ${t.date}`,sheet:'Standings',pi:7,
   head:['Rank','Player','Points won','Points lost','Games played','Games won','Games lost','Points per game'],rows:st.map(p=>[rankOf(st,p),p.n,p.pw,p.pl,p.gp,p.gw,p.gl,p.ppg])}}
-function aData(){const r=allRows();return{name:'All-time_leaderboard',title:'All-time leaderboard',sub:(n=>`Across ${n} tournament${n===1?'':'s'}`)(db.t.filter(t=>!t.ex).length),sheet:'Leaderboard',pi:10,
+function aData(){const r=allRows();return{name:SP[ctx.sport][0].replace(/ /g,'_')+'_All-time_leaderboard',title:SP[ctx.sport][0]+' leaderboard',sub:(n=>`Doubles, rotating partners. Across ${n} tournament${n===1?'':'s'}`)(rotSel().filter(t=>!t.ex).length),sheet:'Leaderboard',pi:10,
  head:['Rank','Player','Total Points','Tournaments played','Tournaments won','Points won','Points lost','Games played','Games won','Games lost','Points per game','Weighted points'],
  rows:r.map(x=>[rankOf(r,x),x.n,x.pts,x.tp,x.w,x.pts,x.pl,x.gp,x.gw,x.gl,x.ppg,x.wpts])}}
 const crcT=(()=>{const t=[];for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0}return t})();
@@ -309,13 +321,13 @@ function exportTable(kind,fmt){
  }catch(e){toast('Export failed: '+e.message)}}
 
 /* ---- backup and transfer between phones ---- */
-const prog=t=>t.rounds.filter(r=>r.closed).length+(t.done?.5:0);
+const prog=t=>isRot(t)?t.rounds.filter(r=>r.closed).length+(t.done?.5:0):t.m.filter(m=>m.sa!==null&&m.sb!==null).length+(t.done?.5:0);
 function okT(t){
  const n=t&&Array.isArray(t.players)?t.players.length:-1,I=i=>Number.isInteger(i)&&i>=0&&i<n,P=a=>Array.isArray(a)&&a.length===2&&a.every(I);
  return n>=4&&typeof t.id==='number'&&typeof t.name==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(t.date)&&t.players.every(x=>typeof x==='string')&&Array.isArray(t.rounds)
   &&t.rounds.every(r=>r&&Array.isArray(r.matches)&&Array.isArray(r.sitting)&&r.sitting.every(I)&&r.matches.every(m=>m&&P(m.a)&&P(m.b)&&[m.sa,m.sb].every(v=>v===null?!r.closed:Number.isInteger(v)&&v>=0)))
   &&(t.done||(t.rounds.length>0&&!t.rounds[t.rounds.length-1].closed))}
-const clean=t=>({id:t.id,name:t.name.slice(0,80),date:t.date,players:t.players.slice(),done:!!t.done,ex:!!t.ex,lvl:Math.max(0,parseInt(t.lvl)||0),
+const clean=t=>({id:t.id,name:t.name.slice(0,80),date:t.date,sport:SP[t.sport]?t.sport:undefined,mode:SP[t.sport]?'rot':undefined,players:t.players.slice(),done:!!t.done,ex:!!t.ex,lvl:Math.max(0,parseInt(t.lvl)||0),
  note:t.done&&typeof t.note==='string'?esc(t.note.slice(0,200)):undefined,
  rounds:t.rounds.map(r=>({closed:!!r.closed,sitting:r.sitting.slice(),matches:r.matches.map(m=>({a:m.a.slice(),b:m.b.slice(),sa:m.sa,sb:m.sb}))}))});
 function exportAll(){
@@ -329,7 +341,7 @@ function importFile(inp){
  r.onload=()=>{try{
   const j=JSON.parse(String(r.result).replace(/^\ufeff/,''));
   if(!j||j.app!=='doubles-tournament'||!Array.isArray(j.t))throw 0;
-  const ts=[...new Map(j.t.filter(okT).map(clean).map(t=>[t.id,t])).values()];
+  const ts=[...new Map(j.t.filter(okAny).map(cleanAny).map(t=>[t.id,t])).values()];
   if(!ts.length)throw 0;
   pending={t:ts,skipped:j.t.length-ts.length};go('imp')
  }catch(e){toast('That is not a valid Doubles Tournament backup file')}};
@@ -338,16 +350,171 @@ function vImp(){
  if(!pending){view={n:'home'};return vHome()}
  const p=pending,st=t=>{const l=db.t.find(x=>x.id===t.id);return!l?['new','done']:prog(t)>prog(l)?['further along','live']:['already here','off']};
  const n=p.t.length,c={};p.t.forEach(t=>{const k=st(t)[0];c[k]=(c[k]||0)+1});
- return back+'<h1>Import data</h1></div>'+`<div class=card><h2>${n} tournament${n===1?'':'s'} found</h2><p class=mu>${c['new']||0} new, ${c['further along']||0} further along than on this phone, ${c['already here']||0} already here.${p.skipped?' '+p.skipped+' unreadable entries were skipped.':''}</p>
+ return backH()+'<h1>Import data</h1></div>'+`<div class=card><h2>${n} tournament${n===1?'':'s'} found</h2><p class=mu>${c['new']||0} new, ${c['further along']||0} further along than on this phone, ${c['already here']||0} already here.${p.skipped?' '+p.skipped+' unreadable entries were skipped.':''}</p>
  <button onclick="doImport('merge')">Add to this phone</button><p class=mu>Keeps everything already here, then adds new tournaments and updates ones that are further along.</p>
  <button class="${armed==='rep'?'arm':'danger'}" onclick="arm('rep')">${armed==='rep'?'Tap again to replace everything':'Replace all data on this phone'}</button>
- <button class=sec onclick="pending=null;go('home')">Cancel</button></div><div class=card>${p.t.map(t=>`<div style="padding:6px 0"><b>${esc(t.name)}</b> <span class="tag ${st(t)[1]}">${st(t)[0]}</span><div class=mu>${t.date}, ${t.players.length} players</div></div>`).join('')}</div>`}
+ <button class=sec onclick="pending=null;go('home')">Cancel</button></div><div class=card>${p.t.map(t=>`<div style="padding:6px 0"><b>${esc(t.name)}</b> <span class="tag ${st(t)[1]}">${st(t)[0]}</span><div class=mu>${SP[t.sport]?SP[t.sport][0]+', ':''}${t.date}, ${(t.players||t.ent).length} ${t.players?'players':'entries'}</div></div>`).join('')}</div>`}
 function doImport(mode){
  const p=pending;
  if(mode==='replace')db.t=p.t.slice();
  else p.t.forEach(t=>{const i=db.t.findIndex(x=>x.id===t.id);if(i<0)db.t.push(t);else if(prog(t)>prog(db.t[i]))db.t[i]=t});
  db.t.sort((a,b)=>a.id-b.id);save();pending=null;toast('Import complete');go('home')}
 act.rep=()=>doImport('replace');
-function render(){$('#app').innerHTML={home:vHome,new:vNew,t:vT,all:vAll,imp:vImp}[view.n]()}
+/* ---- games, modes and formats ---- */
+const SP={pickleball:['Pickleball','🥒',1,'#2f9e44'],badminton:['Badminton','🏸',1,'#3b5bdb'],cricket:['Cricket','🏏',0,'#e8590c'],football:['Football','⚽',0,'#1c7ed6'],tabletennis:['Table tennis','🏓',1,'#d6336c'],tennis:['Tennis','🎾',1,'#f08c00'],basketball:['Basketball','🏀',0,'#d9480f'],volleyball:['Volleyball','🏐',0,'#7048e8'],hockey:['Hockey','🏑',0,'#0c8599']};
+const MAIN=['pickleball','badminton','cricket'],MORE=['football','tabletennis','tennis','basketball','volleyball','hockey'];
+const MODES={rot:'Doubles, rotating partners',fix:'Doubles, fixed partners',sgl:'Singles'};
+const FMTS={ko:'Knockouts',qsf:'League, then quarterfinals, semifinals and final',sf:'League, then semifinals and final'};
+const FS={ko:'Knockouts',qsf:'League + QF, SF, F',sf:'League + SF, F'};
+const isRot=t=>!t.mode||t.mode==='rot';
+const sel=()=>db.t.filter(t=>t.sport===ctx.sport&&(t.mode||'rot')===ctx.mode);
+const rotSel=()=>db.t.filter(t=>isRot(t)&&t.sport===ctx.sport);
+
+function vHome(){
+ const cnt=k=>db.t.filter(t=>t.sport===k).length,un=db.t.filter(t=>!t.sport);
+ const tile=k=>`<button class=tile style="background:${SP[k][3]}" onclick="pick('${k}')"><span class=em>${SP[k][1]}</span><b>${SP[k][0]}</b>${cnt(k)?`<span class=sub>${cnt(k)} tournament${cnt(k)===1?'':'s'}</span>`:''}</button>`;
+ return '<div class=top><h1>🏆 Tournaments</h1></div><h2>Choose a game</h2><div class=tiles>'+MAIN.map(tile).join('')+`<button class="tile more" onclick="showMore=!showMore;render()"><span class=em>${showMore?'▴':'＋'}</span><b>More games</b></button></div>`+
+ (showMore?'<div class=tiles style="margin-top:10px">'+MORE.map(tile).join('')+'</div>':'')+
+ (un.length?`<div class="card item" style="margin-top:16px" onclick="go('assign')"><b>${un.length} earlier tournament${un.length===1?' needs':'s need'} a game</b><div class=mu>Tap to choose which game they belong to.</div></div>`:'')+
+ '<div class=card style="margin-top:16px"><h2>Backup and transfer</h2><p class=mu>Save every tournament of every game to one file, or load a file made on another phone.</p><button class=c4 onclick="exportAll()">Export all data</button><button class=sec onclick="document.getElementById(\'imp\').click()">Import data from a file</button><input type=file id=imp hidden onchange="importFile(this)"></div>'}
+function pick(k){ctx.sport=k;go(SP[k][2]?'mode':'soon')}
+function vSoon(){const [n,e]=SP[ctx.sport];return backH()+`<h1>${e} ${n}</h1></div><div class=card><h2>Coming soon</h2><p class=mu>The rules for ${n.toLowerCase()} tournaments have not been set up yet. Nothing to do here for now.</p></div>`}
+function vMode(){
+ const [n,e]=SP[ctx.sport],c=m=>db.t.filter(t=>t.sport===ctx.sport&&(t.mode||'rot')===m).length;
+ const b=(m,t,d)=>`<button class="tile wide" onclick="ctx.mode='${m}';go('hub')"><b>${t}</b><span class=sub>${d}${c(m)?', '+c(m)+' saved':''}</span></button>`;
+ return backH()+`<h1>${e} ${n}</h1></div><h2>How is it played?</h2>`+b('sgl','Singles','One player against one player')+b('rot','Doubles, rotating partners','New partners and opponents are drawn every round')+b('fix','Doubles, fixed partners','You enter the teams and they stay together')}
+function assignSport(k){db.t.forEach(t=>{if(!t.sport){t.sport=k;t.mode='rot'}});save();toast('Moved to '+SP[k][0]);go('home')}
+function vAssign(){
+ const un=db.t.filter(t=>!t.sport);
+ return backH()+'<h1>Earlier tournaments</h1></div>'+`<div class=card><p>${un.length} tournament${un.length===1?'':'s'} saved before games were added: ${un.map(t=>esc(t.name)).join(', ')}.</p><p class=mu>These were doubles with rotating partners. Which game were they?</p>`+['badminton','pickleball','tabletennis','tennis'].map(k=>`<button onclick="assignSport('${k}')">${SP[k][1]} ${SP[k][0]}</button>`).join('')+'</div>'}
+
+/* ---- singles and fixed partners: knockouts and league with playoffs ---- */
+const unitOf=m=>m==='fix'?'teams':'players';
+function vFmt(){
+ const u=unitOf(ctx.mode),o=(f,t,d)=>`<button class="tile wide" onclick="startFmt('${f}')"><b>${t}</b><span class=sub>${d}</span></button>`;
+ return backH()+'<h1>Tournament format</h1></div><h2>How is the winner decided?</h2>'+
+  o('ko','Knockouts','Random draw. Lose and you are out. Uneven numbers get byes.')+
+  o('qsf','League, then quarterfinals, semifinals and final','Everyone plays everyone once, then the top 8 go through. Needs at least 8 '+u+'.')+
+  o('sf','League, then semifinals and final','Everyone plays everyone once, then the top 4 go through. Needs at least 4 '+u+'.')}
+function startFmt(f){d2={fmt:f,name:'',count:8,names:Array(16).fill('')};go('newx')}
+function namesX(){
+ const fx=ctx.mode==='fix';let h='';
+ for(let i=0;i<d2.count;i++)h+=fx?`<div class=pair><span class=mu>Team ${i+1}</span><input value="${esc(d2.names[2*i]||'')}" placeholder="Player 1" oninput="d2.names[${2*i}]=this.value"><input value="${esc(d2.names[2*i+1]||'')}" placeholder="Player 2" oninput="d2.names[${2*i+1}]=this.value"></div>`
+  :`<input style="margin-bottom:8px" value="${esc(d2.names[i]||'')}" placeholder="Player ${i+1}" oninput="d2.names[${i}]=this.value">`;
+ return h}
+function setCountX(v){const c=Math.min(40,Math.max(0,parseInt(v)||0));d2.count=c;while(d2.names.length<c*2)d2.names.push('');$('#namesx').innerHTML=namesX()}
+function vNewX(){
+ const u=unitOf(ctx.mode),min={ko:2,qsf:8,sf:4}[d2.fmt];
+ return backH()+'<h1>New tournament</h1></div><div class=card>'+
+ `<div class=mu>${SP[ctx.sport][1]} ${SP[ctx.sport][0]}, ${MODES[ctx.mode]}. ${FMTS[d2.fmt]}.</div>
+ <label>Tournament name</label><input value="${esc(d2.name)}" placeholder="e.g. Club championship" oninput="d2.name=this.value">
+ <label>Number of ${u} (at least ${min})</label><input type=number inputmode=numeric min=${min} max=40 value="${d2.count}" oninput="setCountX(this.value)">
+ <h2 style="margin-top:18px">${ctx.mode==='fix'?'Teams':'Player names'}</h2><div id=namesx>${namesX()}</div>
+ <button onclick="startX()">Start tournament</button></div>`}
+function startX(){
+ const fx=ctx.mode==='fix',min={ko:2,qsf:8,sf:4}[d2.fmt],u=unitOf(ctx.mode);
+ if(d2.count<min)return toast(`This format needs at least ${min} ${u}`);
+ const names=d2.names.slice(0,d2.count*(fx?2:1)).map(s=>s.trim());
+ if(names.some(x=>!x))return toast('Enter every name');
+ if(new Set(names.map(x=>x.toLowerCase())).size<names.length)return toast('Player names must be different');
+ const ent=[];for(let i=0;i<d2.count;i++)ent.push(fx?{n:names[2*i]+' & '+names[2*i+1],p:[names[2*i],names[2*i+1]]}:{n:names[i],p:[names[i]]});
+ const t={id:Date.now(),name:d2.name.trim()||'Tournament '+(sel().length+1),date:new Date().toISOString().slice(0,10),sport:ctx.sport,mode:ctx.mode,fmt:d2.fmt,ent,m:[],nid:1,po:false,done:false};
+ if(d2.fmt==='ko')addBracket(t,shuffle(ent.map((_,i)=>i)),'P');else addLeague(t);
+ upd(t);db.t.push(t);save();go('x',t.id)}
+function seedOrder(n){let o=[1];while(o.length<n){const s=o.length*2+1;o=o.flatMap(x=>[x,s-x])}return o}
+/* order = entrants best seed first; seeds beyond the number of entrants become byes for the top seeds */
+function addBracket(t,order,st){
+ const n=order.length;let size=1;while(size<n)size*=2;
+ const so=seedOrder(size),rounds=Math.round(Math.log2(size));let prev=[];
+ for(let r=0;r<rounds;r++){
+  const cnt=size/Math.pow(2,r+1),cur=[];
+  for(let p=0;p<cnt;p++){
+   const m={id:t.nid++,st,rd:r,pos:p,lab:cnt===1?'Final':cnt===2?'Semifinal':cnt===4?'Quarterfinal':'Round of '+cnt*2,a:null,b:null,sa:null,sb:null};
+   if(r===0){const x=so[2*p],y=so[2*p+1];m.a=x<=n?order[x-1]:null;m.b=y<=n?order[y-1]:null;if(m.a===null||m.b===null)m.bye=true}
+   else{m.ca=prev[2*p].id;m.cb=prev[2*p+1].id}
+   cur.push(m);t.m.push(m)}
+  prev=cur}
+ settle(t)}
+/* round robin by the circle method: everyone plays everyone once */
+function addLeague(t){
+ const ids=shuffle(t.ent.map((_,i)=>i));if(ids.length%2)ids.push(null);const n=ids.length;
+ for(let r=0;r<n-1;r++){for(let i=0;i<n/2;i++){const a=ids[i],b=ids[n-1-i];if(a!==null&&b!==null)t.m.push({id:t.nid++,st:'L',rd:r,a,b,sa:null,sb:null})}ids.splice(1,0,ids.pop())}}
+const sameScore=m=>m.sa!==null&&m.sb!==null&&m.sa===m.sb;
+const played=m=>m.sa!==null&&m.sb!==null&&m.sa!==m.sb;
+function W(m){if(m.bye)return m.a!==null?m.a:m.b;return played(m)?(m.sa>m.sb?m.a:m.b):null}
+/* fill each later match from the winners of the two matches that feed it; clear scores whose players changed */
+function settle(t){
+ let cleared=0;const by=new Map(t.m.map(m=>[m.id,m]));
+ t.m.slice().sort((x,y)=>x.rd-y.rd).forEach(m=>{
+  if(m.ca===undefined)return;
+  const a=W(by.get(m.ca)),b=W(by.get(m.cb));
+  if(m.a!==a||m.b!==b){if(m.sa!==null||m.sb!==null)cleared++;m.a=a;m.b=b;m.sa=null;m.sb=null}});
+ return cleared}
+function finalOf(t){const p=t.m.filter(m=>m.st==='P');return p.length?p.reduce((a,b)=>b.rd>a.rd?b:a):null}
+function champ(t){const f=finalOf(t);return f?W(f):null}
+function upd(t){t.done=champ(t)!==null}
+function lgTable(t){
+ const s=t.ent.map((e,i)=>({i,n:e.n,p:0,w:0,l:0,pf:0,pa:0}));
+ t.m.filter(m=>m.st==='L'&&played(m)).forEach(m=>{const A=s[m.a],B=s[m.b];A.p++;B.p++;A.pf+=m.sa;A.pa+=m.sb;B.pf+=m.sb;B.pa+=m.sa;if(m.sa>m.sb){A.w++;B.l++}else{B.w++;A.l++}});
+ s.forEach(x=>x.d=x.pf-x.pa);
+ return s.sort((x,y)=>y.w-x.w||y.d-x.d||y.pf-x.pf||x.n.localeCompare(y.n))}
+function startPo(){
+ const t=T(),K=t.fmt==='qsf'?8:4;
+ if(t.m.some(m=>m.st==='L'&&!played(m)))return toast('Finish every league match first');
+ addBracket(t,lgTable(t).slice(0,K).map(x=>x.i),'P');t.po=true;upd(t);save();render();scrollTo(0,0)}
+const wtxt=(t,m)=>{const w=W(m);return w!==null?'Winner: '+t.ent[w].n:sameScore(m)?"Scores can't be tied":''};
+function mrow(t,m){
+ const nm=i=>i===null?'To be decided':esc(t.ent[i].n);
+ if(m.bye)return `<div class=match id=m${m.id}><div class=mu>${nm(m.a!==null?m.a:m.b)} has a bye</div></div>`;
+ const ready=m.a!==null&&m.b!==null,lock=m.st==='L'&&t.po;
+ const inp=s=>ready?`<input type=number inputmode=numeric min=0 ${lock?'disabled':''} value="${m['s'+s]===null?'':m['s'+s]}" oninput="xi(${m.id},'${s}',this.value)" onchange="xc(${m.id})">`:'<span class=mu>–</span>';
+ return `<div class=match id=m${m.id}><div class="ln a"><span class=tm>${nm(m.a)}</span>${inp('a')}</div><div class=vs>versus</div><div class="ln b"><span class=tm>${nm(m.b)}</span>${inp('b')}</div><div class=mu id=w${m.id}>${esc(wtxt(t,m))}</div></div>`}
+/* typing only stores the number; the change event (leaving the box) updates everything else without redrawing the box being used */
+function xi(mid,s,v){const m=T().m.find(x=>x.id===mid);if(m.st==='L'&&T().po)return;m['s'+s]=v===''?null:Math.max(0,parseInt(v,10)||0);save()}
+function xc(mid){
+ const t=T(),m=t.m.find(x=>x.id===mid);if(m.st==='L'&&t.po)return;
+ const before=new Map(t.m.map(x=>[x.id,x.a+','+x.b]));
+ if(sameScore(m))toast("Scores can't be tied. One side needs more points.");
+ if(settle(t))toast('Later matches that depended on this result were cleared');
+ upd(t);save();
+ t.m.forEach(x=>{if(x.id!==m.id&&before.get(x.id)!==x.a+','+x.b){const e=document.getElementById('m'+x.id);if(e)e.outerHTML=mrow(t,x)}});
+ const w=document.getElementById('w'+m.id);if(w)w.textContent=wtxt(t,m);
+ const a=document.getElementById('xtop');if(a)a.innerHTML=xTop(t);
+ const b=document.getElementById('xtab');if(b)b.innerHTML=xTable(t)}
+function xTop(t){
+ const ch=champ(t),nxt=t.fmt==='qsf'?'quarterfinals':'semifinals';
+ if(ch!==null)return `<div class="card win">🏆 Champion${t.mode==='fix'?' team':''}: <b>${esc(t.ent[ch].n)}</b></div>`;
+ if(t.fmt!=='ko'&&!t.po){
+  const L=t.m.filter(m=>m.st==='L'),left=L.filter(m=>!played(m)).length;
+  return left?`<div class=card><b>${L.length-left} of ${L.length} league matches played</b><div class=mu>Enter every league score to unlock the ${nxt}.</div></div>`
+   :`<div class=card><b>League complete</b><div class=mu>The top ${t.fmt==='qsf'?8:4} go through.</div><button onclick="startPo()">Start ${nxt}</button></div>`}
+ return ''}
+function xTable(t){
+ if(t.fmt==='ko')return '';
+ const K=t.fmt==='qsf'?8:4,rows=lgTable(t),u=t.mode==='fix'?'Team':'Player';
+ return `<div class=card><h2>League table</h2><div class=scr><table><tr><th>Rank</th><th>${u}</th><th class=r>Played</th><th class=r>Won</th><th class=r>Lost</th><th class=r>Points for</th><th class=r>Points against</th><th class=r>Difference</th></tr>${rows.map((r,i)=>`<tr class="${i<K?'qual':''}"><td><span class=rk>${i+1}</span></td><td>${esc(r.n)}</td><td class=r>${r.p}</td><td class=r><b class=pt>${r.w}</b></td><td class=r>${r.l}</td><td class=r>${r.pf}</td><td class=r>${r.pa}</td><td class=r>${r.d>0?'+':''}${r.d}</td></tr>`).join('')}</table></div><p class=mu style="margin:8px 0 0">Ranked by wins, then point difference, then points scored. The top ${K} (shaded) go through to the ${t.fmt==='qsf'?'quarterfinals':'semifinals'}.</p></div>`}
+function vX(){
+ const t=T();if(!t){view={n:'home'};return vHome()}
+ settle(t);upd(t);
+ const grp=st=>{const g={};t.m.filter(m=>m.st===st).forEach(m=>(g[m.rd]=g[m.rd]||[]).push(m));return Object.keys(g).map(Number).sort((a,b)=>a-b).map(r=>g[r])};
+ const hd=ms=>{const l=ms[0].lab;return ms.length>1&&/final$/.test(l)?l+'s':l};
+ let h=backH()+`<h1>${esc(t.name)}</h1></div><div class=mu style="margin:-6px 0 12px">${SP[t.sport][1]} ${SP[t.sport][0]}, ${MODES[t.mode]}. ${FMTS[t.fmt]}.</div><div id=xtop>${xTop(t)}</div>`;
+ h+=grp('P').map(ms=>`<div class=card><h2>${esc(hd(ms))}</h2>${ms.map(m=>mrow(t,m)).join('')}</div>`).join('');
+ if(t.fmt!=='ko')h+=`<div id=xtab>${xTable(t)}</div>`+grp('L').map(ms=>`<div class=card><h2>League, round ${ms[0].rd+1}</h2>${ms.map(m=>mrow(t,m)).join('')}</div>`).join('');
+ h+=`<button class="${armed==='del'?'arm':'danger'}" onclick="arm('del')">${armed==='del'?'Tap again to delete':'Delete tournament'}</button>`;
+ return h}
+/* backup checks for this kind of tournament */
+const okAny=t=>isRot(t)?okT(t):okX(t);
+function okX(t){
+ const E=t&&Array.isArray(t.ent)?t.ent.length:-1,I=i=>Number.isInteger(i)&&i>=0&&i<E,N=v=>v===null||(Number.isInteger(v)&&v>=0);
+ return E>=2&&typeof t.id==='number'&&typeof t.name==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(t.date)&&!!SP[t.sport]&&(t.mode==='fix'||t.mode==='sgl')&&['ko','qsf','sf'].includes(t.fmt)
+  &&t.ent.every(e=>e&&typeof e.n==='string'&&Array.isArray(e.p)&&e.p.every(x=>typeof x==='string'))&&Array.isArray(t.m)&&Number.isInteger(t.nid)
+  &&t.m.every(m=>m&&Number.isInteger(m.id)&&(m.st==='L'||m.st==='P')&&Number.isInteger(m.rd)&&(m.a===null||I(m.a))&&(m.b===null||I(m.b))&&N(m.sa)&&N(m.sb)&&(m.ca===undefined||Number.isInteger(m.ca))&&(m.cb===undefined||Number.isInteger(m.cb)))
+  &&new Set(t.m.map(m=>m.id)).size===t.m.length&&t.m.every(m=>m.ca===undefined||(t.m.some(x=>x.id===m.ca)&&t.m.some(x=>x.id===m.cb)))}
+const cleanAny=t=>isRot(t)?clean(t):({id:t.id,name:t.name.slice(0,80),date:t.date,sport:t.sport,mode:t.mode,fmt:t.fmt,po:!!t.po,done:!!t.done,nid:t.nid,
+ ent:t.ent.map(e=>({n:e.n.slice(0,80),p:e.p.map(x=>x.slice(0,80))})),
+ m:t.m.map(m=>({id:m.id,st:m.st,rd:m.rd,pos:Number.isInteger(m.pos)?m.pos:0,lab:typeof m.lab==='string'?m.lab.slice(0,30):'',a:m.a,b:m.b,sa:m.sa,sb:m.sb,ca:m.ca,cb:m.cb,bye:!!m.bye}))});
+
+function render(){$('#app').innerHTML={home:vHome,hub:vHub,mode:vMode,soon:vSoon,fmt:vFmt,newx:vNewX,x:vX,assign:vAssign,new:vNew,t:vT,all:vAll,imp:vImp}[view.n]()}
 render();
 </script></body></html>
