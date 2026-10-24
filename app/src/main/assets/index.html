@@ -72,7 +72,7 @@ tr.qual td{background:var(--ql)}tr.qual td:first-child{box-shadow:inset 4px 0 #1
 .scr tr.qual td{background:var(--ql)}
 .gh{margin:14px 0 6px;font-size:.95rem}
 .brwrap{overflow:auto;border:1px solid var(--bd);border-radius:10px;background:#fff;max-height:70vh}
-.tmb{margin-bottom:10px;padding:8px;border-radius:12px;background:var(--tint)}.tmb summary{margin-top:6px;color:var(--ac);font-weight:600}.gh{margin:12px 0 4px}.tie{font-size:12px;color:var(--ac)}.tie select{font-size:12px;padding:2px 4px;width:auto;margin:2px 0 0;display:inline-block}.seg{display:flex;gap:8px}.seg button{margin-top:4px;background:var(--tint);color:var(--ac)}.seg button.on{background:linear-gradient(90deg,var(--g1),var(--g2));color:#fff}
+.tmb{margin-bottom:10px;padding:8px;border-radius:12px;background:var(--tint)}.tmb summary{margin-top:6px;color:var(--ac);font-weight:600}.gh{margin:12px 0 4px}.ckn{width:64px;text-align:center;padding:8px 4px;margin:0}.ckr{display:flex;gap:6px;align-items:center;margin-top:4px}.ckr2{display:flex;gap:6px}.ckr2 select{flex:1}.inn{margin-top:10px}.nr{display:flex;gap:8px;align-items:center;margin-top:8px;font-size:14px}.nr input{width:auto;margin:0}.tie{font-size:12px;color:var(--ac)}.tie select{font-size:12px;padding:2px 4px;width:auto;margin:2px 0 0;display:inline-block}.seg{display:flex;gap:8px}.seg button{margin-top:4px;background:var(--tint);color:var(--ac)}.seg button.on{background:linear-gradient(90deg,var(--g1),var(--g2));color:#fff}
 </style></head><body>
 <div class="wrap" id="app"></div><div id="toast"></div>
 <script>
@@ -402,7 +402,7 @@ function vFmt(){
   (team?o('ko','Knockouts','Random draw shown as a bracket you can download. Any number of teams, byes fill the gaps.')+o('grp','Group stage, then knockouts','Teams are split into equal groups and play each other once. The best teams go into a knockout.')
   :o('ko','Knockouts','Random draw shown as a bracket you can download. Start at the quarterfinals (5 to 8 '+u+') or the semifinals (3 to 4).')+o('grp','Group stage, then knockout','The '+u+' are split into equal groups and play within their group. The best of each group go into the quarterfinals or the semifinals.'))}
 function startFmt(f){
- if(ctx.mode==='team'){d2={fmt:f,name:'',size:RULE[ctx.sport].size,count:8,tpg:4,qt:4,tn:[],mem:[]};return go('newt')}
+ if(ctx.mode==='team'){d2={fmt:f,name:'',ov:20,size:RULE[ctx.sport].size,count:8,tpg:4,qt:4,tn:[],mem:[]};return go('newt')}
  d2={fmt:f,ks:'qf',name:'',count:8,groups:2,q:3,names:Array(80).fill('')};autoQ(true);go('newx')}
 function namesX(){
  const fx=ctx.mode==='fix';let h='';
@@ -500,12 +500,13 @@ function finalOf(t){const p=t.m.filter(m=>m.st==='P');return p.length?p.reduce((
 function champ(t){const f=finalOf(t);return f?W(f):null}
 function upd(t){t.done=champ(t)!==null}
 const roOf=(t,i)=>(t.ro&&t.ro[i])||99;
-const tieCmp=t=>(a,b)=>b.pts-a.pts||b.d-a.d||b.pf-a.pf||roOf(t,a.i)-roOf(t,b.i)||a.n.localeCompare(b.n);
+const tieCmp=t=>(a,b)=>b.pts-a.pts||(isCk(t)?b.nrr-a.nrr:(b.d-a.d||b.pf-a.pf))||roOf(t,a.i)-roOf(t,b.i)||a.n.localeCompare(b.n);
 function lgTable(t,g){
  const mem=g===undefined?t.ent.map((_,i)=>i):t.groups[g];
  const s=mem.map(i=>({i,n:t.ent[i].n,p:0,w:0,dn:0,l:0,pf:0,pa:0})),by=new Map(s.map(x=>[x.i,x]));
  t.m.filter(m=>m.st==='L'&&(g===undefined||m.g===g)&&played(m)).forEach(m=>{const A=by.get(m.a),B=by.get(m.b);A.p++;B.p++;A.pf+=m.sa;A.pa+=m.sb;B.pf+=m.sb;B.pa+=m.sa;if(m.sa>m.sb){A.w++;B.l++}else if(m.sa<m.sb){B.w++;A.l++}else if(m.tb&&m.w==='a'){A.w++;B.l++}else if(m.tb&&m.w==='b'){B.w++;A.l++}else{A.dn++;B.dn++}});
- s.forEach(x=>{x.d=x.pf-x.pa;x.pts=t.pt?x.w*t.pt[0]+x.dn*t.pt[1]:x.w});
+ const lm=t.m.filter(m=>m.st==='L'&&(g===undefined||m.g===g)&&played(m));
+ s.forEach(x=>{x.nrr=isCk(t)?nrrOf(t,lm,x.i):0;x.d=x.pf-x.pa;x.pts=t.pt?x.w*t.pt[0]+x.dn*t.pt[1]:x.w});
  return s.sort(tieCmp(t))}
 /* knockout seeds from the groups: every group winner first, then runners-up, and so on.
    Later tiers are shifted so that teams from the same group do not meet in the first round if that can be avoided. */
@@ -527,13 +528,61 @@ function startPo(){
  const t=T(),K=t.fmt==='qsf'?8:4;
  if(t.m.some(m=>m.st==='L'&&!played(m)))return toast('Finish every match first');
  addBracket(t,t.fmt==='grp'?groupSeeds(t):lgTable(t).slice(0,K).map(x=>x.i),'P');t.po=true;upd(t);save();render();scrollTo(0,0)}
+/* ---------- cricket scorecards and net run rate ---------- */
+const isCk=t=>t.mode==='team'&&t.sport==='cricket';
+const wmax=t=>Math.max(1,(t.size||11)-1);
+/* overs are typed as 18.3 (18 overs and 3 balls) and used as 18.5 */
+function oversVal(x){if(x===null||x===undefined||x==='')return null;const w=Math.floor(x+1e-9),b=Math.round((x-w)*10);return b>5?NaN:w+b/6}
+const ckNums=c=>[c.r1,c.w1,c.o1,c.r2,c.w2,c.o2];
+function ckBat(m){const c=m.ck;if(!c||!c.tw||!c.td)return null;return (c.tw==='a')===(c.td==='bat')?'a':'b'}
+function ckSync(t,m){
+ const c=m.ck;m.sa=null;m.sb=null;
+ if(c.nr){m.sa=0;m.sb=0;return ''}
+ const bf=ckBat(m);if(!bf||ckNums(c).some(v=>v===null))return '';
+ for(const k of ['1','2']){
+  const o=oversVal(c['o'+k]);
+  if(isNaN(o))return 'Overs are written like 18.3, which is 18 overs and 3 balls (the balls go from 0 to 5)';
+  if(o>t.ov+1e-9)return 'An innings has at most '+t.ov+' overs';
+  if(c['w'+k]>wmax(t))return 'Wickets cannot be more than '+wmax(t)}
+ m.sa=bf==='a'?c.r1:c.r2;m.sb=bf==='a'?c.r2:c.r1;return ''}
+function ckText(t,m){
+ const c=m.ck;if(!c)return '';if(c.nr)return 'No result. One point each';
+ if(m.sa===null)return '';
+ const bf=ckBat(m),first=bf==='a'?m.a:m.b,second=bf==='a'?m.b:m.a,n=i=>t.ent[i].n;
+ if(c.r1===c.r2)return 'Match tied';
+ return c.r1>c.r2?n(first)+' won by '+(c.r1-c.r2)+(c.r1-c.r2===1?' run':' runs'):n(second)+' won by '+(wmax(t)-c.w2)+(wmax(t)-c.w2===1?' wicket':' wickets')}
+function ckOut(m,k,t){return m.ck['w'+k]>=wmax(t)}
+/* per team: runs scored, overs faced, runs conceded, overs bowled. An all-out innings counts the full quota of overs. */
+function nrrOf(t,ms,i){
+ let rf=0,of=0,ra=0,ob=0;
+ ms.forEach(m=>{if(!m.ck||m.ck.nr||m.sa===null||(m.a!==i&&m.b!==i))return;const c=m.ck,bf=ckBat(m),first=bf===(m.a===i?'a':'b');
+  const mine=first?['1']:['2'],opp=first?['2']:['1'];
+  const ov=k=>ckOut(m,k,t)?t.ov:oversVal(c['o'+k]);
+  rf+=c['r'+mine[0]];of+=ov(mine[0]);ra+=c['r'+opp[0]];ob+=ov(opp[0])});
+ return of>0&&ob>0?rf/of-ra/ob:0}
+const ckSel=(id,k,val,opts)=>`<select onchange="cks(${id},'${k}',this.value)"><option value="">Choose</option>${opts.map(o=>`<option value="${o[0]}" ${val===o[0]?'selected':''}>${esc(o[1])}</option>`).join('')}</select>`;
+function ckForm(t,m,lock){
+ const c=m.ck=m.ck||{tw:null,td:null,r1:null,w1:null,o1:null,r2:null,w2:null,o2:null},n=i=>esc(t.ent[i].n);
+ const bf=ckBat(m),dis=lock?'disabled':'';
+ const num=(k,ph,max)=>`<input class=ckn type=number inputmode=${k[0]==='o'?'decimal':'numeric'} min=0 step=${k[0]==='o'?'0.1':'1'} ${dis} placeholder="${ph}" value="${c[k]===null?'':c[k]}" oninput="cki(${m.id},'${k}',this.value)" onchange="ckc(${m.id})">`;
+ const inn=(k,team)=>`<div class=inn><b>${k==='1'?'1st':'2nd'} innings: ${n(team)}</b><div class=ckr>${num('r'+k,'Runs')}<span>/</span>${num('w'+k,'Wkts')}<span>in</span>${num('o'+k,'Overs')}</div></div>`;
+ let h=`<div class=ln style="gap:6px"><span class=tm>${n(m.a)} versus ${n(m.b)}</span></div>`;
+ if(m.st==='L')h+=`<label class=nr><input type=checkbox ${c.nr?'checked':''} ${dis} onchange="cks(${m.id},'nr',this.checked?1:'')"> Abandoned, no result</label>`;
+ if(!c.nr){
+  h+=`<div class=mu style="margin-top:6px">Toss won by</div>${lock?'':''}<div class=ckr2>${ckSel(m.id,'tw',c.tw,[['a',t.ent[m.a].n],['b',t.ent[m.b].n]])}${ckSel(m.id,'td',c.td,[['bat','chose to bat'],['bowl','chose to bowl']])}</div>`;
+  if(bf){const f=bf==='a'?m.a:m.b,s2=bf==='a'?m.b:m.a;h+=inn('1',f)+inn('2',s2)+`<div class=mu>Overs are written like 18.3 for 18 overs and 3 balls. Innings are at most ${t.ov} overs.</div>`}}
+ return h}
+function cki(id,k,v){const t=T(),m=t.m.find(x=>x.id===id);if(m.st==='L'&&t.po)return;m.ck[k]=v===''?null:(k[0]==='o'?parseFloat(v):Math.max(0,parseInt(v,10)||0));if(k[0]==='o'&&isNaN(m.ck[k]))m.ck[k]=null;const e=ckSync(t,m);save()}
+function ckc(id){const t=T(),m=t.m.find(x=>x.id===id);const e=ckSync(t,m);if(e){toast(e)}xc(id)}
+function cks(id,k,v){const t=T(),m=t.m.find(x=>x.id===id);if(m.st==='L'&&t.po)return;m.ck[k]=v===''?null:v;ckSync(t,m);save();const e=document.getElementById('m'+id);if(e)e.outerHTML=mrow(t,m);xc(id)}
 const tbName=t=>t.mode==='team'?RULE[t.sport].tbn:'tie-break';
-const wtxt=(t,m)=>{const w=W(m);if(w!==null)return 'Winner: '+t.ent[w].n+(sameScore(m)?' ('+tbName(t)+')':'');if(sameScore(m))return m.st==='L'&&m.dr&&!m.tb?'Draw':m.tb?'Level. Choose who won the '+tbName(t):"Scores can't be tied";return ''};
-const tbHtml=(t,m)=>m.tb&&m.a!==null&&m.b!==null&&sameScore(m)?`<div class=mu style="margin-top:6px">Level after full time. Who won the ${tbName(t)}?</div><div class=seg><button class="${m.w==='a'?'on':''}" onclick="xw(${m.id},'a')">${esc(t.ent[m.a].n)}</button><button class="${m.w==='b'?'on':''}" onclick="xw(${m.id},'b')">${esc(t.ent[m.b].n)}</button></div>`:'';
+const wtxt=(t,m)=>{if(isCk(t)&&m.ck){const c=ckText(t,m);if(c){const w=W(m);return c+(sameScore(m)&&!m.ck.nr?(w!==null?'. Super over won by '+t.ent[w].n:m.tb?'. Choose who won the super over':''):'')}return ''}const w=W(m);if(w!==null)return 'Winner: '+t.ent[w].n+(sameScore(m)?' ('+tbName(t)+')':'');if(sameScore(m))return m.st==='L'&&m.dr&&!m.tb?'Draw':m.tb?'Level. Choose who won the '+tbName(t):"Scores can't be tied";return ''};
+const tbHtml=(t,m)=>m.tb&&!(m.ck&&m.ck.nr)&&m.a!==null&&m.b!==null&&sameScore(m)?`<div class=mu style="margin-top:6px">Level after full time. Who won the ${tbName(t)}?</div><div class=seg><button class="${m.w==='a'?'on':''}" onclick="xw(${m.id},'a')">${esc(t.ent[m.a].n)}</button><button class="${m.w==='b'?'on':''}" onclick="xw(${m.id},'b')">${esc(t.ent[m.b].n)}</button></div>`:'';
 function mrow(t,m){
  const nm=i=>i===null?'To be decided':esc(t.ent[i].n);
  if(m.bye)return `<div class=match id=m${m.id}><div class=mu>${nm(m.a!==null?m.a:m.b)} has a bye</div></div>`;
  const ready=m.a!==null&&m.b!==null,lock=m.st==='L'&&t.po;
+ if(isCk(t)&&ready)return `<div class=match id=m${m.id}>${ckForm(t,m,lock)}<div class=mu id=w${m.id}>${esc(wtxt(t,m))}</div><div id=tb${m.id}>${tbHtml(t,m)}</div></div>`;
  const inp=s=>ready?`<input type=number inputmode=numeric min=0 ${lock?'disabled':''} value="${m['s'+s]===null?'':m['s'+s]}" oninput="xi(${m.id},'${s}',this.value)" onchange="xc(${m.id})">`:'<span class=mu>–</span>';
  return `<div class=match id=m${m.id}><div class="ln a"><span class=tm>${nm(m.a)}</span>${inp('a')}</div><div class=vs>versus</div><div class="ln b"><span class=tm>${nm(m.b)}</span>${inp('b')}</div><div class=mu id=w${m.id}>${esc(wtxt(t,m))}</div><div id=tb${m.id}>${tbHtml(t,m)}</div></div>`}
 function setRo(ids,id,pos){const t=T();if(t.po)return;const a=ids.filter(x=>x!==id);a.splice(Math.max(0,Math.min(a.length,parseInt(pos)-1)),0,id);t.ro=t.ro||{};a.forEach((x,k)=>t.ro[x]=k+1);upd(t);save();const b=document.getElementById('xtab');if(b)b.innerHTML=xTable(t)}
@@ -562,25 +611,25 @@ function xTop(t){
    :`<div class=card><b>${grp?'Group stage':'League'} complete</b><div class=mu>${grp?'The top '+t.q+' of each group'+(t.qx?' and the '+t.qx+' best '+ord(t.q+1)+'-placed':'')+' go through.':'The top '+(t.fmt==='qsf'?8:4)+' go through.'}</div><button onclick="startPo()">Start ${nxt}</button></div>`}
  return ''}
 const tabHtml=(rows,K,u,t,fin)=>{
- const key=r=>r.pts+'|'+r.d+'|'+r.pf,cnt={},first={};rows.forEach((r,i)=>{const k=key(r);cnt[k]=(cnt[k]||0)+1;if(first[k]===undefined)first[k]=i});
+ const ck=t&&isCk(t),key=r=>ck?r.pts+'|'+r.nrr.toFixed(6):r.pts+'|'+r.d+'|'+r.pf,cnt={},first={};rows.forEach((r,i)=>{const k=key(r);cnt[k]=(cnt[k]||0)+1;if(first[k]===undefined)first[k]=i});
  const tie=(r,i)=>{const k=key(r);if(!fin||t.po||cnt[k]<2)return '';const ids=rows.filter(x=>key(x)===k).map(x=>x.i),pos=i-first[k];return `<br><span class=tie>Tied: <select onchange="setRo([${ids}],${r.i},this.value)">${ids.map((_,j)=>`<option value=${j+1} ${j===pos?'selected':''}>${ord(first[k]+j+1)}</option>`).join('')}</select></span>`};
 
  const team=t&&t.pt,dr=team&&RULE[t.sport].draw;
- const head=team?`<tr><th>Rank</th><th>${u}</th><th class=r>Played</th><th class=r>Won</th>${dr?'<th class=r>Drawn</th>':''}<th class=r>Lost</th><th class=r>For</th><th class=r>Against</th><th class=r>Difference</th><th class=r>Points</th></tr>`
+ const head=team?`<tr><th>Rank</th><th>${u}</th><th class=r>Played</th><th class=r>Won</th>${dr?`<th class=r>${ck?'Tied/NR':'Drawn'}</th>`:''}<th class=r>Lost</th>${ck?'':'<th class=r>For</th><th class=r>Against</th><th class=r>Difference</th>'}<th class=r>Points</th>${ck?'<th class=r>Net run rate</th>':''}</tr>`
   :`<tr><th>Rank</th><th>${u}</th><th class=r>Played</th><th class=r>Won</th><th class=r>Lost</th><th class=r>Points for</th><th class=r>Points against</th><th class=r>Difference</th></tr>`;
- const row=(r,i)=>team?`<tr class="${i<K?'qual':''}"><td><span class=rk>${i+1}</span></td><td>${esc(r.n)}${tie(r,i)}</td><td class=r>${r.p}</td><td class=r>${r.w}</td>${dr?`<td class=r>${r.dn}</td>`:''}<td class=r>${r.l}</td><td class=r>${r.pf}</td><td class=r>${r.pa}</td><td class=r>${r.d>0?'+':''}${r.d}</td><td class=r><b class=pt>${r.pts}</b></td></tr>`
+ const row=(r,i)=>team?`<tr class="${i<K?'qual':''}"><td><span class=rk>${i+1}</span></td><td>${esc(r.n)}${tie(r,i)}</td><td class=r>${r.p}</td><td class=r>${r.w}</td>${dr?`<td class=r>${r.dn}</td>`:''}<td class=r>${r.l}</td>${ck?'':`<td class=r>${r.pf}</td><td class=r>${r.pa}</td><td class=r>${r.d>0?'+':''}${r.d}</td>`}<td class=r><b class=pt>${r.pts}</b></td>${ck?`<td class=r>${r.nrr>0?'+':''}${r.nrr.toFixed(3)}</td>`:''}</tr>`
   :`<tr class="${i<K?'qual':''}"><td><span class=rk>${i+1}</span></td><td>${esc(r.n)}${tie(r,i)}</td><td class=r>${r.p}</td><td class=r><b class=pt>${r.w}</b></td><td class=r>${r.l}</td><td class=r>${r.pf}</td><td class=r>${r.pa}</td><td class=r>${r.d>0?'+':''}${r.d}</td></tr>`;
  return `<div class=scr><table>${head}${rows.map(row).join('')}</table></div>`};
 const ord=n=>n+(['th','st','nd','rd'][(n%100>10&&n%100<14)?0:Math.min(n%10,4)%4]||'th');
 function xTable(t){
  if(t.fmt==='ko')return '';
  const u=t.mode==='team'?'Team':t.mode==='fix'?'Team':'Player',tm=t.mode==='team';
- const rule=tm?`Ranked by points (${t.pt[0]} for a win${RULE[t.sport].draw?', '+t.pt[1]+' for a draw':''}), then difference, then scored.`:'Ranked by wins, then point difference, then points scored.';
+ const rule=tm?`Ranked by points (${t.pt[0]} for a win${RULE[t.sport].draw?', '+t.pt[1]+' for a draw':''}), then ${isCk(t)?'net run rate':'difference, then scored'}.`:'Ranked by wins, then point difference, then points scored.';
  if(t.fmt==='grp'){
   const ex=t.qx||0,tabs=t.groups.map((_,g)=>lgTable(t,g));
   let h=`<div class=card><h2>Group tables</h2>${t.groups.map((_,g)=>`<h3 class=gh>${gname(g)}</h3>${tabHtml(tabs[g],t.q,u,t,t.m.filter(m=>m.st==='L'&&m.g===g).every(played))}`).join('')}<p class=mu style="margin:8px 0 0">${rule} The top ${t.q} of each group (shaded) go into the knockout${ex?', plus the '+ex+' best '+ord(t.q+1)+'-placed '+(tm?'teams':'entries')+'.':'.'}</p></div>`;
   if(ex){const wc=tabs.map(tb=>tb[t.q]).sort(tieCmp(t));
-   h+=`<div class=card><h2>Best ${ord(t.q+1)}-placed ${tm?'teams':'entries'}</h2>${tabHtml(wc,ex,u,t,t.m.filter(m=>m.st==='L').every(played))}<p class=mu style="margin:8px 0 0">The top ${ex} (shaded) go through. Compared across groups by points, then difference, then scored.</p></div>`}
+   h+=`<div class=card><h2>Best ${ord(t.q+1)}-placed ${tm?'teams':'entries'}</h2>${tabHtml(wc,ex,u,t,t.m.filter(m=>m.st==='L').every(played))}<p class=mu style="margin:8px 0 0">The top ${ex} (shaded) go through. Compared across groups by points, then ${isCk(t)?'net run rate':'difference, then scored'}.</p></div>`}
   return h}
  const K=t.fmt==='qsf'?8:4;
  return `<div class=card><h2>League table</h2>${tabHtml(lgTable(t),K,u,t,t.m.filter(m=>m.st==='L').every(played))}<p class=mu style="margin:8px 0 0">${rule} The top ${K} (shaded) go through to the ${t.fmt==='qsf'?'quarterfinals':'semifinals'}.</p></div>`}
@@ -654,6 +703,7 @@ function vNewT(){
  `<div class=mu>${nm[1]} ${nm[0]}, ${FMTS[d2.fmt]}.</div>
  <label>Tournament name</label><input value="${esc(d2.name)}" placeholder="e.g. Inter-house cup" oninput="d2.name=this.value">
  <label>Players per team</label><input type=number inputmode=numeric min=1 max=30 value="${d2.size}" oninput="d2.size=parseInt(this.value)||0">
+ ${ctx.sport==='cricket'?`<label>Overs per innings</label><input type=number inputmode=numeric min=1 max=50 value="${d2.ov}" oninput="d2.ov=parseInt(this.value)||0">`:''}
  <label>Number of teams</label><input type=number inputmode=numeric min=2 max=64 value="${d2.count}" oninput="d2.count=parseInt(this.value)||0;hintT()">
  ${g?`<label>Teams per group</label><input type=number inputmode=numeric min=2 value="${d2.tpg}" oninput="d2.tpg=parseInt(this.value)||0;hintT()"><label>Total teams going to the knockout</label><input type=number inputmode=numeric min=2 value="${d2.qt}" oninput="d2.qt=parseInt(this.value)||0;hintT()">`:''}
  ${g&&RULE[ctx.sport].pen?`<label>Penalty shootout when a group match is drawn?</label><div class=seg><button class="${d2.pen?'on':''}" onclick="d2.pen=1;render()">Yes</button><button class="${d2.pen?'':'on'}" onclick="d2.pen=0;render()">No</button></div><div class=mu style="margin-top:6px">${d2.pen?'A drawn match is settled by a shootout: the winner gets the full win points and the loser none. Goals count from the main game only.':'Drawn matches stay as draws.'}</div>`:''}
@@ -661,6 +711,8 @@ function vNewT(){
  <button onclick="nextT()">Next: team names</button></div>`}
 function nextT(){
  if(!(d2.size>=1&&d2.size<=30))return toast('Players per team must be between 1 and 30');
+ if(ctx.sport==='cricket'&&!(d2.ov>=1&&d2.ov<=50))return toast('Overs per innings must be between 1 and 50');
+ if(ctx.sport==='cricket'&&d2.size<2)return toast('A cricket team needs at least 2 players');
  const m=teamMath(d2);if(!m.ok)return toast(m.msg);
  d2.tn=Array.from({length:d2.count},(_,i)=>d2.tn[i]||'');d2.mem=Array.from({length:d2.count},(_,i)=>d2.mem[i]||Array(d2.size).fill(''));
  d2.mem.forEach((a,i)=>{while(a.length<d2.size)a.push('');d2.mem[i]=a.slice(0,d2.size)});
@@ -675,7 +727,7 @@ function startT(){
  const m=teamMath(d2);if(!m.ok)return toast(m.msg);
  const ent=names.map((n,i)=>({n,p:d2.mem[i].map(x=>x.trim()).filter(Boolean)}));
  const R=RULE[ctx.sport];
- const t={id:Date.now(),name:d2.name.trim()||'Tournament '+(sel().length+1),date:new Date().toISOString().slice(0,10),sport:ctx.sport,mode:'team',fmt:d2.fmt,size:d2.size,pen:!!(d2.pen&&d2.fmt==='grp'&&RULE[ctx.sport].pen),pt:R.pts.slice(),ent,m:[],nid:1,po:false,done:false};
+ const t={id:Date.now(),name:d2.name.trim()||'Tournament '+(sel().length+1),date:new Date().toISOString().slice(0,10),sport:ctx.sport,mode:'team',fmt:d2.fmt,size:d2.size,ov:ctx.sport==='cricket'?d2.ov:undefined,pen:!!(d2.pen&&d2.fmt==='grp'&&RULE[ctx.sport].pen),pt:R.pts.slice(),ent,m:[],nid:1,po:false,done:false};
  if(d2.fmt==='ko')addBracket(t,shuffle(ent.map((_,i)=>i)),'P');
  else{const ids=shuffle(ent.map((_,i)=>i));t.groups=[];t.q=m.q;t.qx=m.qx;for(let g=0;g<m.G;g++){const mem=ids.slice(g*m.z,(g+1)*m.z);t.groups.push(mem);addLeagueOf(t,mem,g)}}
  upd(t);db.t.push(t);save();go('x',t.id)}
@@ -691,12 +743,12 @@ const okAny=t=>isRot(t)?okT(t):okX(t);
 function okX(t){
  const E=t&&Array.isArray(t.ent)?t.ent.length:-1,I=i=>Number.isInteger(i)&&i>=0&&i<E,N=v=>v===null||(Number.isInteger(v)&&v>=0);
  return E>=2&&typeof t.id==='number'&&typeof t.name==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(t.date)&&!!SP[t.sport]&&(t.mode==='fix'||t.mode==='sgl'||t.mode==='team')&&['ko','grp','qsf','sf'].includes(t.fmt)&&(t.fmt!=='grp'||(Number.isInteger(t.q)&&t.q>=1&&Array.isArray(t.groups)&&t.groups.every(g=>Array.isArray(g)&&g.every(I))))
-  &&(t.mode!=='team'||(Array.isArray(t.pt)&&t.pt.length===2&&t.pt.every(Number.isInteger)))&&(t.qx===undefined||Number.isInteger(t.qx))&&(t.ro===undefined||(t.ro&&typeof t.ro==='object'))&&t.ent.every(e=>e&&typeof e.n==='string'&&Array.isArray(e.p)&&e.p.every(x=>typeof x==='string'))&&Array.isArray(t.m)&&Number.isInteger(t.nid)
+  &&(t.mode!=='team'||(Array.isArray(t.pt)&&t.pt.length===2&&t.pt.every(Number.isInteger)))&&(t.qx===undefined||Number.isInteger(t.qx))&&(t.sport!=='cricket'||t.mode!=='team'||(Number.isInteger(t.ov)&&t.ov>=1&&t.ov<=50))&&(t.ro===undefined||(t.ro&&typeof t.ro==='object'))&&t.ent.every(e=>e&&typeof e.n==='string'&&Array.isArray(e.p)&&e.p.every(x=>typeof x==='string'))&&Array.isArray(t.m)&&Number.isInteger(t.nid)
   &&t.m.every(m=>m&&Number.isInteger(m.id)&&(m.st==='L'||m.st==='P')&&Number.isInteger(m.rd)&&(m.a===null||I(m.a))&&(m.b===null||I(m.b))&&N(m.sa)&&N(m.sb)&&(m.ca===undefined||Number.isInteger(m.ca))&&(m.cb===undefined||Number.isInteger(m.cb))&&(m.g===undefined||Number.isInteger(m.g))&&(t.ks===undefined||t.ks==='qf'||t.ks==='sf'))
   &&new Set(t.m.map(m=>m.id)).size===t.m.length&&t.m.every(m=>m.ca===undefined||(t.m.some(x=>x.id===m.ca)&&t.m.some(x=>x.id===m.cb)))}
-const cleanAny=t=>isRot(t)?clean(t):({id:t.id,name:t.name.slice(0,80),date:t.date,sport:t.sport,mode:t.mode,fmt:t.fmt,ks:t.ks==='qf'||t.ks==='sf'?t.ks:undefined,groups:t.groups?t.groups.map(g=>g.slice()):undefined,q:t.q,qx:Number.isInteger(t.qx)?t.qx:undefined,size:Number.isInteger(t.size)?t.size:undefined,pen:!!t.pen,ro:t.ro&&typeof t.ro==='object'?Object.fromEntries(Object.entries(t.ro).filter(([k,v])=>Number.isInteger(+k)&&+k>=0&&+k<t.ent.length&&Number.isInteger(v)&&v>0&&v<1000)):undefined,pt:Array.isArray(t.pt)?t.pt.map(Number):undefined,po:!!t.po,done:!!t.done,nid:t.nid,
+const cleanAny=t=>isRot(t)?clean(t):({id:t.id,name:t.name.slice(0,80),date:t.date,sport:t.sport,mode:t.mode,fmt:t.fmt,ks:t.ks==='qf'||t.ks==='sf'?t.ks:undefined,groups:t.groups?t.groups.map(g=>g.slice()):undefined,q:t.q,qx:Number.isInteger(t.qx)?t.qx:undefined,size:Number.isInteger(t.size)?t.size:undefined,pen:!!t.pen,ov:Number.isInteger(t.ov)?t.ov:undefined,ro:t.ro&&typeof t.ro==='object'?Object.fromEntries(Object.entries(t.ro).filter(([k,v])=>Number.isInteger(+k)&&+k>=0&&+k<t.ent.length&&Number.isInteger(v)&&v>0&&v<1000)):undefined,pt:Array.isArray(t.pt)?t.pt.map(Number):undefined,po:!!t.po,done:!!t.done,nid:t.nid,
  ent:t.ent.map(e=>({n:e.n.slice(0,80),p:e.p.map(x=>x.slice(0,80))})),
- m:t.m.map(m=>({id:m.id,st:m.st,rd:m.rd,pos:Number.isInteger(m.pos)?m.pos:0,lab:typeof m.lab==='string'?m.lab.slice(0,30):'',a:m.a,b:m.b,sa:m.sa,sb:m.sb,ca:m.ca,cb:m.cb,g:m.g,bye:!!m.bye,dr:m.dr?1:undefined,tb:m.tb?1:undefined,w:m.w==='a'||m.w==='b'?m.w:null}))});
+ m:t.m.map(m=>({id:m.id,st:m.st,rd:m.rd,pos:Number.isInteger(m.pos)?m.pos:0,lab:typeof m.lab==='string'?m.lab.slice(0,30):'',a:m.a,b:m.b,sa:m.sa,sb:m.sb,ca:m.ca,cb:m.cb,g:m.g,bye:!!m.bye,ck:m.ck?{tw:m.ck.tw==='a'||m.ck.tw==='b'?m.ck.tw:null,td:m.ck.td==='bat'||m.ck.td==='bowl'?m.ck.td:null,nr:m.ck.nr?1:undefined,...Object.fromEntries(['r1','w1','o1','r2','w2','o2'].map(k=>[k,typeof m.ck[k]==='number'&&isFinite(m.ck[k])&&m.ck[k]>=0?m.ck[k]:null]))}:undefined,dr:m.dr?1:undefined,tb:m.tb?1:undefined,w:m.w==='a'||m.w==='b'?m.w:null}))});
 
 function render(){$('#app').innerHTML={home:vHome,hub:vHub,mode:vMode,soon:vSoon,fmt:vFmt,newx:vNewX,newt:vNewT,teams:vTeams,roster:vRoster,x:vX,assign:vAssign,new:vNew,t:vT,all:vAll,imp:vImp}[view.n]()}
 render();
