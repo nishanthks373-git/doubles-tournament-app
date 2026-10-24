@@ -127,14 +127,15 @@ function layout(teams,sitting,oc,k){
 
 /* ---- actions ---- */
 function go(n,id){view={n,id};armed=null;render();scrollTo(0,0)}
-const PARENT={list:'home',hub:'mode',mode:'home',fmt:'hub',newx:'fmt',newt:'fmt',teams:'newt',roster:'x',new:'hub',t:'hub',x:'hub',all:'hub',soon:'home',assign:'home',imp:'home'};
+const PARENT={exp:'home',list:'home',hub:'mode',mode:'home',fmt:'hub',newx:'fmt',newt:'fmt',teams:'newt',roster:'x',new:'hub',t:'hub',x:'hub',all:'hub',soon:'home',assign:'home',imp:'home'};
 const racket=()=>SP[ctx.sport]&&SP[ctx.sport][2]===1,hubOf=()=>racket()?'list':'hub';
 function parentOf(n){
+ if(n==='exp')return xs.g!==null&&xs.back==='home'?'exp0':xs.back;
  let p=PARENT[n]||'home';
  if(racket()){if(n==='list')p='home';else if(n==='mode')p='list';else if(n==='fmt'||n==='new')p='mode';else if(p==='hub')p='list'}
  else if(p==='mode')p='home';
  return p}
-window.goBack=()=>{if(view.n==='home')return false;const p=parentOf(view.n);go(p,p==='x'?view.id:undefined);return true};
+window.goBack=()=>{if(view.n==='home')return false;const p=parentOf(view.n);if(p==='exp0'){xs.g=null;render();return true}go(p,p==='x'?view.id:undefined);return true};
 function backH(){return '<div class=top><button class=ghost onclick="goBack()">&lsaquo; Back</button>'}
 function newT(){draft={name:'',count:8,names:Array(8).fill('')};go('new')}
 function setCount(v){const c=Math.min(40,Math.max(0,parseInt(v)||0));draft.count=c;while(draft.names.length<c)draft.names.push('');$('#names').innerHTML=namesHtml()}
@@ -192,7 +193,7 @@ const rkb=(k,p)=>`<span class="rk ${k<4&&p>0?'rk'+k:''}">${k}</span>`;
 function tbl(rows,tid){return '<div class=scr><table><tr><th>Rank</th><th>Player</th><th class=r>Points won</th><th class=r>Points lost</th><th class=r>Games played</th><th class=r>Games won</th><th class=r>Games lost</th><th class=r>Points per game</th></tr>'+rows.map(r=>{const k=rankOf(rows,r);return `<tr class="pr ${k===1&&r.pts>0?'top1':''}" ${prow(r.n,tid)}><td>${rkb(k,r.pts)}</td><td><span class=cv>▸</span>${esc(r.n)}</td><td class=r>${r.pw}</td><td class=r>${r.pl}</td><td class=r>${r.gp}</td><td class=r>${r.gw}</td><td class=r>${r.gl}</td><td class=r><b class=pt>${r.ppg}</b></td></tr>`}).join('')+'</table></div>'}
 function vHub(){
  const [n,e]=SP[ctx.sport],rot=ctx.mode==='rot',L=sel(),u=unitOf(ctx.mode);
- let h=backH()+`<h1>${e} ${n}</h1></div><div class=mu style="margin:-6px 0 12px">${MODES[ctx.mode]}</div><button onclick="${rot?'newT()':"go('fmt')"}">New tournament</button>`+(rot?`<button class=sec onclick="go('all')">🏆 Leaderboard</button>`:'')+'<h2 style="margin:20px 0 8px">Your tournaments</h2>';
+ let h=backH()+`<h1>${e} ${n}</h1></div><div class=mu style="margin:-6px 0 12px">${MODES[ctx.mode]}</div><button onclick="${rot?'newT()':"go('fmt')"}">New tournament</button>`+(L.length?`<button class=sec onclick="openExp(ctx.sport,'hub')">Export this game</button>`:'')+(rot?`<button class=sec onclick="go('all')">🏆 Leaderboard</button>`:'')+'<h2 style="margin:20px 0 8px">Your tournaments</h2>';
  if(!L.length)h+='<p class=mu>Nothing here yet. Tap New tournament to get started.</p>';
  L.slice().reverse().forEach((t,i)=>{
   if(rot)h+=`<div class="card item" style="border-left-color:${PAL[i%6]}" onclick="go('t',${t.id})"><b>${esc(t.name)}</b><div class=mu>${t.date}, ${t.players.length} players</div><div class="tag ${t.done?'done':'live'}">${t.done?'Finished: '+winners(t).map(x=>esc(x.n)).join(', ')+' ('+standings(t)[0].ppg+' pts/game)':'In progress, round '+t.rounds.length}</div>${t.ex?'<div class="tag off">Not in leaderboard</div>':''}</div>`;
@@ -343,6 +344,29 @@ function exportAll(){
  if(!db.t.length)return toast('Nothing to export yet');
  const j=JSON.stringify({app:'doubles-tournament',v:1,exported:new Date().toISOString(),t:db.t});
  saveFile('DoublesTournament_backup_'+new Date().toISOString().slice(0,10)+'.json','application/json',new TextEncoder().encode(j))}
+/* export: choose a game, then which of its tournaments */
+let xs={g:null,ids:new Set(),back:'home'};
+function openExp(g,back){xs={g:null,ids:new Set(),back:back||'home'};if(g)pickExpGame(g);else go('exp')}
+const expList=g=>db.t.filter(t=>g==='all'||t.sport===g);
+function pickExpGame(g){xs.g=g;xs.ids=new Set(expList(g).map(t=>t.id));go('exp')}
+function expTog(id){xs.ids.has(id)?xs.ids.delete(id):xs.ids.add(id);render()}
+function expAll(on){xs.ids=on?new Set(expList(xs.g).map(t=>t.id)):new Set();render()}
+function vExp(){
+ if(xs.g===null){
+  const games=MAIN.concat(Object.keys(SP).filter(k=>!MAIN.includes(k))).filter(k=>SP[k]&&db.t.some(t=>t.sport===k));
+  return backH()+'<h1>Export data</h1></div><h2>Which game?</h2>'+
+   (db.t.length?`<button class="tile wide" onclick="pickExpGame('all')"><b>All games</b><span class=sub>${db.t.length} tournament${db.t.length===1?'':'s'}</span></button>`:'<p class=mu>Nothing to export yet.</p>')+
+   games.map(k=>{const n=db.t.filter(t=>t.sport===k).length;return `<button class="tile wide" style="background:${SP[k][3]}" onclick="pickExpGame('${k}')"><b>${SP[k][1]} ${SP[k][0]}</b><span class=sub>${n} tournament${n===1?'':'s'}</span></button>`}).join('')}
+ const L=expList(xs.g),name=xs.g==='all'?'All games':SP[xs.g][1]+' '+SP[xs.g][0],n=L.filter(t=>xs.ids.has(t.id)).length;
+ return backH()+`<h1>Export: ${esc(name)}</h1></div><div class=card><p class=mu style="margin-top:0">Tick the tournaments to include.</p>
+ <div class=seg><button onclick="expAll(1)">Select all</button><button onclick="expAll(0)">Clear</button></div>
+ ${L.slice().reverse().map(t=>{const m=t.mode||'rot';return `<label class=nr style="margin-top:10px;font-size:15px"><input type=checkbox ${xs.ids.has(t.id)?'checked':''} onchange="expTog(${t.id})"><span><b>${esc(t.name)}</b><br><span class=mu>${xs.g==='all'&&SP[t.sport]?SP[t.sport][1]+' '+SP[t.sport][0]+', ':''}${MODES[m]||''}, ${t.date}</span></span></label>`}).join('')}
+ <button style="margin-top:16px" onclick="exportSel()" ${n?'':'disabled'}>Export ${n} tournament${n===1?'':'s'}</button></div>`}
+function exportSel(){
+ const L=expList(xs.g).filter(t=>xs.ids.has(t.id));if(!L.length)return toast('Tick at least one tournament');
+ const j=JSON.stringify({app:'doubles-tournament',v:1,exported:new Date().toISOString(),t:L});
+ const g=xs.g==='all'?'AllGames':SP[xs.g][0].replace(/\W+/g,'');
+ saveFile('Tournaments_'+g+'_'+new Date().toISOString().slice(0,10)+'.json','application/json',new TextEncoder().encode(j))}
 function importFile(inp){
  const f=inp.files[0];inp.value='';if(!f)return;
  if(f.size>5e6)return toast('That file is too large to be a backup');
@@ -388,7 +412,7 @@ function vHome(){
  return '<div class=top><h1>🏆 Tournament scheduler</h1></div><h2>Choose a game</h2><div class=tiles>'+MAIN.map(tile).join('')+`<button class="tile more" onclick="showMore=!showMore;render()"><span class=em>${showMore?'▴':'＋'}</span><b>More games</b></button></div>`+
  (showMore?'<div class=tiles style="margin-top:10px">'+MORE.map(tile).join('')+'</div>':'')+
  (un.length?`<div class="card item" style="margin-top:16px" onclick="go('assign')"><b>${un.length} earlier tournament${un.length===1?' needs':'s need'} a game</b><div class=mu>Tap to choose which game they belong to.</div></div>`:'')+
- '<div class=card style="margin-top:16px"><h2>Backup and transfer</h2><p class=mu>Save every tournament of every game to one file, or load a file made on another phone.</p><button class=c4 onclick="exportAll()">Export all data</button><button class=sec onclick="document.getElementById(\'imp\').click()">Import data from a file</button><input type=file id=imp hidden onchange="importFile(this)"></div>'}
+ '<div class=card style="margin-top:16px"><h2>Backup and transfer</h2><p class=mu>Save tournaments to a file, one game at a time or all together, or load a file made on another phone.</p><button class=c4 onclick="openExp(null,\'home\')">Export data</button><button class=sec onclick="document.getElementById(\'imp\').click()">Import data from a file</button><input type=file id=imp hidden onchange="importFile(this)"></div>'}
 function pick(k){ctx.sport=k;if(SP[k][2]===2){ctx.mode='team';go('hub')}else go('list')}
 function vSoon(){const [n,e]=SP[ctx.sport];return backH()+`<h1>${e} ${n}</h1></div><div class=card><h2>Coming soon</h2><p class=mu>The rules for ${n.toLowerCase()} tournaments have not been set up yet. Nothing to do here for now.</p></div>`}
 const listCard=(t,i)=>{
@@ -397,7 +421,7 @@ const listCard=(t,i)=>{
  const ch=champ(t);return `<div class="card item" style="border-left-color:${PAL[i%6]}" onclick="ctx.mode='${m}';go('x',${t.id})"><b>${esc(t.name)}</b><div class=mu>${t.date}, ${t.ent.length} ${unitOf(m)}, ${FS[t.fmt]}</div>${tag}<div class="tag ${ch!==null?'done':'live'}">${ch!==null?'Champion: '+esc(t.ent[ch].n):'In progress'}</div></div>`};
 function vList(){
  const [n,e]=SP[ctx.sport],L=db.t.filter(t=>t.sport===ctx.sport),hasRot=L.some(isRot);
- let h=backH()+`<h1>${e} ${n}</h1></div><button onclick="go('mode')">New tournament</button>`+(hasRot?`<button class=sec onclick="ctx.mode='rot';go('all')">🏆 Doubles leaderboard (rotating partners)</button>`:'')+'<h2 style="margin:20px 0 8px">Your tournaments</h2>';
+ let h=backH()+`<h1>${e} ${n}</h1></div><button onclick="go('mode')">New tournament</button>`+(L.length?`<button class=sec onclick="openExp(ctx.sport,'list')">Export this game</button>`:'')+(hasRot?`<button class=sec onclick="ctx.mode='rot';go('all')">🏆 Doubles leaderboard (rotating partners)</button>`:'')+'<h2 style="margin:20px 0 8px">Your tournaments</h2>';
  if(!L.length)h+='<p class=mu>Nothing here yet. Tap New tournament to get started.</p>';
  return h+L.slice().reverse().map(listCard).join('')}
 function vMode(){
@@ -816,6 +840,6 @@ const cleanAny=t=>isRot(t)?clean(t):({id:t.id,name:t.name.slice(0,80),date:t.dat
  ent:t.ent.map(e=>({n:e.n.slice(0,80),p:e.p.map(x=>x.slice(0,80))})),
  m:t.m.map(m=>({id:m.id,st:m.st,rd:m.rd,pos:Number.isInteger(m.pos)?m.pos:0,lab:typeof m.lab==='string'?m.lab.slice(0,30):'',a:m.a,b:m.b,sa:m.sa,sb:m.sb,ca:m.ca,cb:m.cb,g:m.g,kw:Number.isInteger(m.kw)?m.kw:undefined,bye:!!m.bye,ck:m.ck?{tw:m.ck.tw==='a'||m.ck.tw==='b'?m.ck.tw:null,td:m.ck.td==='bat'||m.ck.td==='bowl'?m.ck.td:null,nr:m.ck.nr?1:undefined,...Object.fromEntries(['r1','w1','o1','r2','w2','o2'].map(k=>[k,typeof m.ck[k]==='number'&&isFinite(m.ck[k])&&m.ck[k]>=0?m.ck[k]:null]))}:undefined,dr:m.dr?1:undefined,tb:m.tb?1:undefined,w:m.w==='a'||m.w==='b'?m.w:null}))});
 
-function render(){$('#app').innerHTML={home:vHome,list:vList,hub:vHub,mode:vMode,soon:vSoon,fmt:vFmt,newx:vNewX,newt:vNewT,teams:vTeams,roster:vRoster,x:vX,assign:vAssign,new:vNew,t:vT,all:vAll,imp:vImp}[view.n]()}
+function render(){$('#app').innerHTML={home:vHome,list:vList,exp:vExp,hub:vHub,mode:vMode,soon:vSoon,fmt:vFmt,newx:vNewX,newt:vNewT,teams:vTeams,roster:vRoster,x:vX,assign:vAssign,new:vNew,t:vT,all:vAll,imp:vImp}[view.n]()}
 render();
 </script></body></html>
