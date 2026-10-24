@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Doubles Tournament</title>
+<title>Tournament scheduler</title>
 <style>
 :root{--bg:#eef1fb;--card:#fff;--tx:#17203a;--mu:#5f6b8a;--ac:#3b5bdb;--on:#fff;--tint:#e5eafd;--bd:#d9def2;--wn:#d6336c;--ta:#1c7ed6;--tb:#e8590c;--g1:#3b5bdb;--g2:#7048e8;--hl:#fff4c2;--ql:#e6fcf5}
 @media(prefers-color-scheme:dark){:root{--bg:#0f1426;--card:#1a2140;--tx:#eaeefc;--mu:#98a3c7;--ac:#8ea2ff;--on:#0f1426;--tint:#27305a;--bd:#2c3566;--wn:#ff7aa8;--ta:#74c0fc;--tb:#ffa94d;--g1:#4263eb;--g2:#7950f2;--hl:#3b3a22;--ql:#12362d}}
@@ -377,7 +377,7 @@ const rotSel=()=>db.t.filter(t=>isRot(t)&&t.sport===ctx.sport);
 function vHome(){
  const cnt=k=>db.t.filter(t=>t.sport===k).length,un=db.t.filter(t=>!t.sport);
  const tile=k=>`<button class=tile style="background:${SP[k][3]}" onclick="pick('${k}')"><span class=em>${SP[k][1]}</span><b>${SP[k][0]}</b>${cnt(k)?`<span class=sub>${cnt(k)} tournament${cnt(k)===1?'':'s'}</span>`:''}</button>`;
- return '<div class=top><h1>🏆 Tournaments</h1></div><h2>Choose a game</h2><div class=tiles>'+MAIN.map(tile).join('')+`<button class="tile more" onclick="showMore=!showMore;render()"><span class=em>${showMore?'▴':'＋'}</span><b>More games</b></button></div>`+
+ return '<div class=top><h1>🏆 Tournament scheduler</h1></div><h2>Choose a game</h2><div class=tiles>'+MAIN.map(tile).join('')+`<button class="tile more" onclick="showMore=!showMore;render()"><span class=em>${showMore?'▴':'＋'}</span><b>More games</b></button></div>`+
  (showMore?'<div class=tiles style="margin-top:10px">'+MORE.map(tile).join('')+'</div>':'')+
  (un.length?`<div class="card item" style="margin-top:16px" onclick="go('assign')"><b>${un.length} earlier tournament${un.length===1?' needs':'s need'} a game</b><div class=mu>Tap to choose which game they belong to.</div></div>`:'')+
  '<div class=card style="margin-top:16px"><h2>Backup and transfer</h2><p class=mu>Save every tournament of every game to one file, or load a file made on another phone.</p><button class=c4 onclick="exportAll()">Export all data</button><button class=sec onclick="document.getElementById(\'imp\').click()">Import data from a file</button><input type=file id=imp hidden onchange="importFile(this)"></div>'}
