@@ -72,7 +72,7 @@ tr.qual td{background:var(--ql)}tr.qual td:first-child{box-shadow:inset 4px 0 #1
 .scr tr.qual td{background:var(--ql)}
 .gh{margin:14px 0 6px;font-size:.95rem}
 .brwrap{overflow:auto;border:1px solid var(--bd);border-radius:10px;background:#fff;max-height:70vh}
-.tmb{margin-bottom:10px;padding:8px;border-radius:12px;background:var(--tint)}.tmb summary{margin-top:6px;color:var(--ac);font-weight:600}.gh{margin:12px 0 4px}.seg{display:flex;gap:8px}.seg button{margin-top:4px;background:var(--tint);color:var(--ac)}.seg button.on{background:linear-gradient(90deg,var(--g1),var(--g2));color:#fff}
+.tmb{margin-bottom:10px;padding:8px;border-radius:12px;background:var(--tint)}.tmb summary{margin-top:6px;color:var(--ac);font-weight:600}.gh{margin:12px 0 4px}.tie{font-size:12px;color:var(--ac)}.tie select{font-size:12px;padding:2px 4px;width:auto;margin:2px 0 0;display:inline-block}.seg{display:flex;gap:8px}.seg button{margin-top:4px;background:var(--tint);color:var(--ac)}.seg button.on{background:linear-gradient(90deg,var(--g1),var(--g2));color:#fff}
 </style></head><body>
 <div class="wrap" id="app"></div><div id="toast"></div>
 <script>
@@ -499,16 +499,18 @@ function settle(t){
 function finalOf(t){const p=t.m.filter(m=>m.st==='P');return p.length?p.reduce((a,b)=>b.rd>a.rd?b:a):null}
 function champ(t){const f=finalOf(t);return f?W(f):null}
 function upd(t){t.done=champ(t)!==null}
+const roOf=(t,i)=>(t.ro&&t.ro[i])||99;
+const tieCmp=t=>(a,b)=>b.pts-a.pts||b.d-a.d||b.pf-a.pf||roOf(t,a.i)-roOf(t,b.i)||a.n.localeCompare(b.n);
 function lgTable(t,g){
  const mem=g===undefined?t.ent.map((_,i)=>i):t.groups[g];
  const s=mem.map(i=>({i,n:t.ent[i].n,p:0,w:0,dn:0,l:0,pf:0,pa:0})),by=new Map(s.map(x=>[x.i,x]));
  t.m.filter(m=>m.st==='L'&&(g===undefined||m.g===g)&&played(m)).forEach(m=>{const A=by.get(m.a),B=by.get(m.b);A.p++;B.p++;A.pf+=m.sa;A.pa+=m.sb;B.pf+=m.sb;B.pa+=m.sa;if(m.sa>m.sb){A.w++;B.l++}else if(m.sa<m.sb){B.w++;A.l++}else if(m.tb&&m.w==='a'){A.w++;B.l++}else if(m.tb&&m.w==='b'){B.w++;A.l++}else{A.dn++;B.dn++}});
  s.forEach(x=>{x.d=x.pf-x.pa;x.pts=t.pt?x.w*t.pt[0]+x.dn*t.pt[1]:x.w});
- return s.sort((x,y)=>y.pts-x.pts||y.d-x.d||y.pf-x.pf||x.n.localeCompare(y.n))}
+ return s.sort(tieCmp(t))}
 /* knockout seeds from the groups: every group winner first, then runners-up, and so on.
    Later tiers are shifted so that teams from the same group do not meet in the first round if that can be avoided. */
 function groupSeeds(t){
- const G=t.groups.length,q=t.q,ex=t.qx||0,tabs=t.groups.map((_,g)=>lgTable(t,g)),rank=(a,b)=>b.pts-a.pts||b.d-a.d||b.pf-a.pf||a.n.localeCompare(b.n);
+ const G=t.groups.length,q=t.q,ex=t.qx||0,tabs=t.groups.map((_,g)=>lgTable(t,g)),rank=tieCmp(t);
  const gw=tabs.map((tb,g)=>({...tb[0],g})).sort(rank).map(x=>x.g);
  const extra=ex?tabs.map((tb,g)=>({...tb[q],g})).sort(rank).slice(0,ex).map(x=>x.i):[];
  const grpOf=new Map();t.groups.forEach((m,g)=>m.forEach(i=>grpOf.set(i,g)));
@@ -534,6 +536,7 @@ function mrow(t,m){
  const ready=m.a!==null&&m.b!==null,lock=m.st==='L'&&t.po;
  const inp=s=>ready?`<input type=number inputmode=numeric min=0 ${lock?'disabled':''} value="${m['s'+s]===null?'':m['s'+s]}" oninput="xi(${m.id},'${s}',this.value)" onchange="xc(${m.id})">`:'<span class=mu>–</span>';
  return `<div class=match id=m${m.id}><div class="ln a"><span class=tm>${nm(m.a)}</span>${inp('a')}</div><div class=vs>versus</div><div class="ln b"><span class=tm>${nm(m.b)}</span>${inp('b')}</div><div class=mu id=w${m.id}>${esc(wtxt(t,m))}</div><div id=tb${m.id}>${tbHtml(t,m)}</div></div>`}
+function setRo(ids,id,pos){const t=T();if(t.po)return;const a=ids.filter(x=>x!==id);a.splice(Math.max(0,Math.min(a.length,parseInt(pos)-1)),0,id);t.ro=t.ro||{};a.forEach((x,k)=>t.ro[x]=k+1);upd(t);save();const b=document.getElementById('xtab');if(b)b.innerHTML=xTable(t)}
 function xw(mid,side){const t=T(),m=t.m.find(x=>x.id===mid);m.w=side;xc(mid)}
 /* typing only stores the number; the change event (leaving the box) updates everything else without redrawing the box being used */
 function xi(mid,s,v){const m=T().m.find(x=>x.id===mid);if(m.st==='L'&&T().po)return;m['s'+s]=v===''?null:Math.max(0,parseInt(v,10)||0);save()}
@@ -558,12 +561,15 @@ function xTop(t){
   return left?`<div class=card><b>${L.length-left} of ${L.length} ${grp?'group':'league'} matches played</b><div class=mu>Enter every score to unlock the ${nxt}.</div></div>`
    :`<div class=card><b>${grp?'Group stage':'League'} complete</b><div class=mu>${grp?'The top '+t.q+' of each group'+(t.qx?' and the '+t.qx+' best '+ord(t.q+1)+'-placed':'')+' go through.':'The top '+(t.fmt==='qsf'?8:4)+' go through.'}</div><button onclick="startPo()">Start ${nxt}</button></div>`}
  return ''}
-const tabHtml=(rows,K,u,t)=>{
+const tabHtml=(rows,K,u,t,fin)=>{
+ const key=r=>r.pts+'|'+r.d+'|'+r.pf,cnt={},first={};rows.forEach((r,i)=>{const k=key(r);cnt[k]=(cnt[k]||0)+1;if(first[k]===undefined)first[k]=i});
+ const tie=(r,i)=>{const k=key(r);if(!fin||t.po||cnt[k]<2)return '';const ids=rows.filter(x=>key(x)===k).map(x=>x.i),pos=i-first[k];return `<br><span class=tie>Tied: <select onchange="setRo([${ids}],${r.i},this.value)">${ids.map((_,j)=>`<option value=${j+1} ${j===pos?'selected':''}>${ord(first[k]+j+1)}</option>`).join('')}</select></span>`};
+
  const team=t&&t.pt,dr=team&&RULE[t.sport].draw;
  const head=team?`<tr><th>Rank</th><th>${u}</th><th class=r>Played</th><th class=r>Won</th>${dr?'<th class=r>Drawn</th>':''}<th class=r>Lost</th><th class=r>For</th><th class=r>Against</th><th class=r>Difference</th><th class=r>Points</th></tr>`
   :`<tr><th>Rank</th><th>${u}</th><th class=r>Played</th><th class=r>Won</th><th class=r>Lost</th><th class=r>Points for</th><th class=r>Points against</th><th class=r>Difference</th></tr>`;
- const row=(r,i)=>team?`<tr class="${i<K?'qual':''}"><td><span class=rk>${i+1}</span></td><td>${esc(r.n)}</td><td class=r>${r.p}</td><td class=r>${r.w}</td>${dr?`<td class=r>${r.dn}</td>`:''}<td class=r>${r.l}</td><td class=r>${r.pf}</td><td class=r>${r.pa}</td><td class=r>${r.d>0?'+':''}${r.d}</td><td class=r><b class=pt>${r.pts}</b></td></tr>`
-  :`<tr class="${i<K?'qual':''}"><td><span class=rk>${i+1}</span></td><td>${esc(r.n)}</td><td class=r>${r.p}</td><td class=r><b class=pt>${r.w}</b></td><td class=r>${r.l}</td><td class=r>${r.pf}</td><td class=r>${r.pa}</td><td class=r>${r.d>0?'+':''}${r.d}</td></tr>`;
+ const row=(r,i)=>team?`<tr class="${i<K?'qual':''}"><td><span class=rk>${i+1}</span></td><td>${esc(r.n)}${tie(r,i)}</td><td class=r>${r.p}</td><td class=r>${r.w}</td>${dr?`<td class=r>${r.dn}</td>`:''}<td class=r>${r.l}</td><td class=r>${r.pf}</td><td class=r>${r.pa}</td><td class=r>${r.d>0?'+':''}${r.d}</td><td class=r><b class=pt>${r.pts}</b></td></tr>`
+  :`<tr class="${i<K?'qual':''}"><td><span class=rk>${i+1}</span></td><td>${esc(r.n)}${tie(r,i)}</td><td class=r>${r.p}</td><td class=r><b class=pt>${r.w}</b></td><td class=r>${r.l}</td><td class=r>${r.pf}</td><td class=r>${r.pa}</td><td class=r>${r.d>0?'+':''}${r.d}</td></tr>`;
  return `<div class=scr><table>${head}${rows.map(row).join('')}</table></div>`};
 const ord=n=>n+(['th','st','nd','rd'][(n%100>10&&n%100<14)?0:Math.min(n%10,4)%4]||'th');
 function xTable(t){
@@ -572,12 +578,12 @@ function xTable(t){
  const rule=tm?`Ranked by points (${t.pt[0]} for a win${RULE[t.sport].draw?', '+t.pt[1]+' for a draw':''}), then difference, then scored.`:'Ranked by wins, then point difference, then points scored.';
  if(t.fmt==='grp'){
   const ex=t.qx||0,tabs=t.groups.map((_,g)=>lgTable(t,g));
-  let h=`<div class=card><h2>Group tables</h2>${t.groups.map((_,g)=>`<h3 class=gh>${gname(g)}</h3>${tabHtml(tabs[g],t.q,u,t)}`).join('')}<p class=mu style="margin:8px 0 0">${rule} The top ${t.q} of each group (shaded) go into the knockout${ex?', plus the '+ex+' best '+ord(t.q+1)+'-placed '+(tm?'teams':'entries')+'.':'.'}</p></div>`;
-  if(ex){const wc=tabs.map(tb=>tb[t.q]).sort((a,b)=>b.pts-a.pts||b.d-a.d||b.pf-a.pf||a.n.localeCompare(b.n));
-   h+=`<div class=card><h2>Best ${ord(t.q+1)}-placed ${tm?'teams':'entries'}</h2>${tabHtml(wc,ex,u,t)}<p class=mu style="margin:8px 0 0">The top ${ex} (shaded) go through. Compared across groups by points, then difference, then scored.</p></div>`}
+  let h=`<div class=card><h2>Group tables</h2>${t.groups.map((_,g)=>`<h3 class=gh>${gname(g)}</h3>${tabHtml(tabs[g],t.q,u,t,t.m.filter(m=>m.st==='L'&&m.g===g).every(played))}`).join('')}<p class=mu style="margin:8px 0 0">${rule} The top ${t.q} of each group (shaded) go into the knockout${ex?', plus the '+ex+' best '+ord(t.q+1)+'-placed '+(tm?'teams':'entries')+'.':'.'}</p></div>`;
+  if(ex){const wc=tabs.map(tb=>tb[t.q]).sort(tieCmp(t));
+   h+=`<div class=card><h2>Best ${ord(t.q+1)}-placed ${tm?'teams':'entries'}</h2>${tabHtml(wc,ex,u,t,t.m.filter(m=>m.st==='L').every(played))}<p class=mu style="margin:8px 0 0">The top ${ex} (shaded) go through. Compared across groups by points, then difference, then scored.</p></div>`}
   return h}
  const K=t.fmt==='qsf'?8:4;
- return `<div class=card><h2>League table</h2>${tabHtml(lgTable(t),K,u,t)}<p class=mu style="margin:8px 0 0">${rule} The top ${K} (shaded) go through to the ${t.fmt==='qsf'?'quarterfinals':'semifinals'}.</p></div>`}
+ return `<div class=card><h2>League table</h2>${tabHtml(lgTable(t),K,u,t,t.m.filter(m=>m.st==='L').every(played))}<p class=mu style="margin:8px 0 0">${rule} The top ${K} (shaded) go through to the ${t.fmt==='qsf'?'quarterfinals':'semifinals'}.</p></div>`}
 /* the knockout drawn as a tree, for the screen and for PDF / image downloads */
 function drawBracket(t){
  const ms=t.m.filter(m=>m.st==='P'),R=Math.max(...ms.map(m=>m.rd))+1,cols=[];
@@ -685,10 +691,10 @@ const okAny=t=>isRot(t)?okT(t):okX(t);
 function okX(t){
  const E=t&&Array.isArray(t.ent)?t.ent.length:-1,I=i=>Number.isInteger(i)&&i>=0&&i<E,N=v=>v===null||(Number.isInteger(v)&&v>=0);
  return E>=2&&typeof t.id==='number'&&typeof t.name==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(t.date)&&!!SP[t.sport]&&(t.mode==='fix'||t.mode==='sgl'||t.mode==='team')&&['ko','grp','qsf','sf'].includes(t.fmt)&&(t.fmt!=='grp'||(Number.isInteger(t.q)&&t.q>=1&&Array.isArray(t.groups)&&t.groups.every(g=>Array.isArray(g)&&g.every(I))))
-  &&(t.mode!=='team'||(Array.isArray(t.pt)&&t.pt.length===2&&t.pt.every(Number.isInteger)))&&(t.qx===undefined||Number.isInteger(t.qx))&&t.ent.every(e=>e&&typeof e.n==='string'&&Array.isArray(e.p)&&e.p.every(x=>typeof x==='string'))&&Array.isArray(t.m)&&Number.isInteger(t.nid)
+  &&(t.mode!=='team'||(Array.isArray(t.pt)&&t.pt.length===2&&t.pt.every(Number.isInteger)))&&(t.qx===undefined||Number.isInteger(t.qx))&&(t.ro===undefined||(t.ro&&typeof t.ro==='object'))&&t.ent.every(e=>e&&typeof e.n==='string'&&Array.isArray(e.p)&&e.p.every(x=>typeof x==='string'))&&Array.isArray(t.m)&&Number.isInteger(t.nid)
   &&t.m.every(m=>m&&Number.isInteger(m.id)&&(m.st==='L'||m.st==='P')&&Number.isInteger(m.rd)&&(m.a===null||I(m.a))&&(m.b===null||I(m.b))&&N(m.sa)&&N(m.sb)&&(m.ca===undefined||Number.isInteger(m.ca))&&(m.cb===undefined||Number.isInteger(m.cb))&&(m.g===undefined||Number.isInteger(m.g))&&(t.ks===undefined||t.ks==='qf'||t.ks==='sf'))
   &&new Set(t.m.map(m=>m.id)).size===t.m.length&&t.m.every(m=>m.ca===undefined||(t.m.some(x=>x.id===m.ca)&&t.m.some(x=>x.id===m.cb)))}
-const cleanAny=t=>isRot(t)?clean(t):({id:t.id,name:t.name.slice(0,80),date:t.date,sport:t.sport,mode:t.mode,fmt:t.fmt,ks:t.ks==='qf'||t.ks==='sf'?t.ks:undefined,groups:t.groups?t.groups.map(g=>g.slice()):undefined,q:t.q,qx:Number.isInteger(t.qx)?t.qx:undefined,size:Number.isInteger(t.size)?t.size:undefined,pen:!!t.pen,pt:Array.isArray(t.pt)?t.pt.map(Number):undefined,po:!!t.po,done:!!t.done,nid:t.nid,
+const cleanAny=t=>isRot(t)?clean(t):({id:t.id,name:t.name.slice(0,80),date:t.date,sport:t.sport,mode:t.mode,fmt:t.fmt,ks:t.ks==='qf'||t.ks==='sf'?t.ks:undefined,groups:t.groups?t.groups.map(g=>g.slice()):undefined,q:t.q,qx:Number.isInteger(t.qx)?t.qx:undefined,size:Number.isInteger(t.size)?t.size:undefined,pen:!!t.pen,ro:t.ro&&typeof t.ro==='object'?Object.fromEntries(Object.entries(t.ro).filter(([k,v])=>Number.isInteger(+k)&&+k>=0&&+k<t.ent.length&&Number.isInteger(v)&&v>0&&v<1000)):undefined,pt:Array.isArray(t.pt)?t.pt.map(Number):undefined,po:!!t.po,done:!!t.done,nid:t.nid,
  ent:t.ent.map(e=>({n:e.n.slice(0,80),p:e.p.map(x=>x.slice(0,80))})),
  m:t.m.map(m=>({id:m.id,st:m.st,rd:m.rd,pos:Number.isInteger(m.pos)?m.pos:0,lab:typeof m.lab==='string'?m.lab.slice(0,30):'',a:m.a,b:m.b,sa:m.sa,sb:m.sb,ca:m.ca,cb:m.cb,g:m.g,bye:!!m.bye,dr:m.dr?1:undefined,tb:m.tb?1:undefined,w:m.w==='a'||m.w==='b'?m.w:null}))});
 
