@@ -72,6 +72,7 @@ tr.qual td{background:var(--ql)}tr.qual td:first-child{box-shadow:inset 4px 0 #1
 .scr tr.qual td{background:var(--ql)}
 .gh{margin:14px 0 6px;font-size:.95rem}
 .brwrap{overflow:auto;border:1px solid var(--bd);border-radius:10px;background:#fff;max-height:70vh}
+.seg{display:flex;gap:8px}.seg button{margin-top:4px;background:var(--tint);color:var(--ac)}.seg button.on{background:linear-gradient(90deg,var(--g1),var(--g2));color:#fff}
 </style></head><body>
 <div class="wrap" id="app"></div><div id="toast"></div>
 <script>
@@ -367,7 +368,7 @@ const SP={pickleball:['Pickleball','ðŸ¥’',1,'#2f9e44'],badminton:['Badminton','ð
 const MAIN=['pickleball','badminton','cricket'],MORE=['football','tabletennis','tennis','basketball','volleyball','hockey'];
 const MODES={rot:'Doubles, rotating partners',fix:'Doubles, fixed partners',sgl:'Singles'};
 const FMTS={ko:'Knockouts',grp:'Group stage, then knockout',qsf:'League, then quarterfinals, semifinals and final',sf:'League, then semifinals and final'};
-const MIN={ko:2,grp:4,qsf:8,sf:4},gname=g=>'Group '+String.fromCharCode(65+g);
+const MIN={ko:3,grp:4,qsf:8,sf:4},KR={qf:[5,8],sf:[3,4]},KS={qf:'quarterfinals, semifinals and final',sf:'semifinals and final'},gname=g=>'Group '+String.fromCharCode(65+g);
 const FS={ko:'Knockouts',grp:'Groups + knockout',qsf:'League + QF, SF, F',sf:'League + SF, F'};
 const isRot=t=>!t.mode||t.mode==='rot';
 const sel=()=>db.t.filter(t=>t.sport===ctx.sport&&(t.mode||'rot')===ctx.mode);
@@ -396,42 +397,61 @@ const unitOf=m=>m==='fix'?'teams':'players';
 function vFmt(){
  const u=unitOf(ctx.mode),o=(f,t,d)=>`<button class="tile wide" onclick="startFmt('${f}')"><b>${t}</b><span class=sub>${d}</span></button>`;
  return backH()+'<h1>Tournament format</h1></div><h2>How is the winner decided?</h2>'+
-  o('ko','Knockouts','Random draw shown as a bracket you can download. Lose and you are out. Uneven numbers get byes.')+
-  o('grp','Group stage, then knockout','The '+u+' are split into equal groups and play within their group. The best of each group go into a knockout.')}
-function startFmt(f){d2={fmt:f,name:'',count:8,groups:2,q:2,names:Array(80).fill('')};go('newx')}
+  o('ko','Knockouts','Random draw shown as a bracket you can download. Start at the quarterfinals (5 to 8 '+u+') or the semifinals (3 to 4).')+
+  o('grp','Group stage, then knockout','The '+u+' are split into equal groups and play within their group. The best of each group go into the quarterfinals or the semifinals.')}
+function startFmt(f){d2={fmt:f,ks:'qf',name:'',count:8,groups:2,q:3,names:Array(80).fill('')};autoQ(true);go('newx')}
 function namesX(){
  const fx=ctx.mode==='fix';let h='';
  for(let i=0;i<d2.count;i++)h+=fx?`<div class=pair><span class=mu>Team ${i+1}</span><input value="${esc(d2.names[2*i]||'')}" placeholder="Player 1" oninput="d2.names[${2*i}]=this.value"><input value="${esc(d2.names[2*i+1]||'')}" placeholder="Player 2" oninput="d2.names[${2*i+1}]=this.value"></div>`
   :`<input style="margin-bottom:8px" value="${esc(d2.names[i]||'')}" placeholder="Player ${i+1}" oninput="d2.names[${i}]=this.value">`;
  return h}
+const stageName=()=>d2.ks==='qf'?'quarterfinals':'semifinals';
 function hintText(){
- const u=unitOf(ctx.mode),n=d2.count,G=d2.groups,ok=[];for(let k=2;k<=n/2;k++)if(n%k===0)ok.push(k);
- if(G>=2&&n%G===0&&n/G>=2){const z=n/G;return `${z} ${u} per group. ${d2.q>=1&&d2.q<z?G*d2.q+' go into the knockout.':'Advance between 1 and '+(z-1)+' from each group.'}`}
+ const u=unitOf(ctx.mode),n=d2.count,G=d2.groups,[lo,hi]=KR[d2.ks||'qf'],ok=[];
+ if(d2.fmt==='ko')return n>=lo&&n<=hi?(n<hi?`${hi-n} ${hi-n===1?'bye goes':'byes go'} to the top seeds.`:'No byes needed.'):`The ${stageName()} take ${lo} to ${hi} ${u}. For more, use a group stage.`;
+ for(let k=2;k<=n/2;k++)if(n%k===0)ok.push(k);
+ if(G>=2&&n%G===0&&n/G>=2){const z=n/G,Q=G*d2.q;
+  if(!(d2.q>=1&&d2.q<z))return `${z} ${u} per group. Advance between 1 and ${z-1} from each group.`;
+  return `${z} ${u} per group. ${Q} go into the knockout.${Q>=lo&&Q<=hi?'':' The '+stageName()+' need '+lo+' to '+hi+', so change the groups, the number advancing or the starting round.'}`}
  return `Groups must be equal. Possible numbers of groups for ${n} ${u}: ${ok.length?ok.join(', '):'none, change the number of '+u}.`}
 function hintX(){const e=document.getElementById('ghint');if(e)e.textContent=hintText()}
-function setCountX(v){const c=Math.min(40,Math.max(0,parseInt(v)||0));d2.count=c;while(d2.names.length<c*2)d2.names.push('');$('#namesx').innerHTML=namesX();hintX()}
+/* pick a sensible number advancing per group so the knockout fills 8 (quarterfinals) or 4 (semifinals) places */
+function autoQ(noDom){
+ if(d2.fmt!=='grp'){if(!noDom)hintX();return}
+ const G=d2.groups,z=G>=2&&d2.count%G===0?d2.count/G:0;
+ if(z>=2){d2.q=Math.max(1,Math.min(z-1,Math.floor((d2.ks==='qf'?8:4)/G)))}
+ if(!noDom){const e=document.getElementById('qin');if(e)e.value=d2.q;hintX()}}
+function setKs(v){
+ d2.ks=v;const [lo,hi]=KR[v];
+ if(d2.fmt==='ko'&&(d2.count<lo||d2.count>hi))d2.count=hi;
+ autoQ(true);render()}
+function setCountX(v){const c=Math.min(40,Math.max(0,parseInt(v)||0));d2.count=c;while(d2.names.length<c*2)d2.names.push('');$('#namesx').innerHTML=namesX();autoQ()}
 function vNewX(){
- const u=unitOf(ctx.mode),min=MIN[d2.fmt],g=d2.fmt==='grp';
+ const u=unitOf(ctx.mode),g=d2.fmt==='grp',[lo,hi]=KR[d2.ks],lbl=g?`at least ${MIN.grp}`:`${lo} to ${hi}`;
  return backH()+'<h1>New tournament</h1></div><div class=card>'+
  `<div class=mu>${SP[ctx.sport][1]} ${SP[ctx.sport][0]}, ${MODES[ctx.mode]}. ${FMTS[d2.fmt]}.</div>
  <label>Tournament name</label><input value="${esc(d2.name)}" placeholder="e.g. Club championship" oninput="d2.name=this.value">
- <label>Number of ${u} (at least ${min})</label><input type=number inputmode=numeric min=${min} max=40 value="${d2.count}" oninput="setCountX(this.value)">
- ${g?`<label>Number of groups</label><input type=number inputmode=numeric min=2 value="${d2.groups}" oninput="d2.groups=parseInt(this.value)||0;hintX()"><label>Advancing from each group</label><input type=number inputmode=numeric min=1 value="${d2.q}" oninput="d2.q=parseInt(this.value)||0;hintX()"><div class=mu id=ghint style="margin-top:6px">${hintText()}</div>`:''}
+ <label>Knockout starts at</label><div class=seg><button class="${d2.ks==='qf'?'on':''}" onclick="setKs('qf')">Quarterfinals</button><button class="${d2.ks==='sf'?'on':''}" onclick="setKs('sf')">Semifinals</button></div><div class=mu style="margin-top:6px">${d2.ks==='qf'?'Quarterfinals, semifinals and final':'Semifinals and final'}</div>
+ <label>Number of ${u} (${lbl})</label><input type=number inputmode=numeric min=1 max=40 value="${d2.count}" oninput="setCountX(this.value)">
+ ${g?`<label>Number of groups</label><input type=number inputmode=numeric min=2 value="${d2.groups}" oninput="d2.groups=parseInt(this.value)||0;autoQ()"><label>Advancing from each group</label><input id=qin type=number inputmode=numeric min=1 value="${d2.q}" oninput="d2.q=parseInt(this.value)||0;hintX()">`:''}
+ <div class=mu id=ghint style="margin-top:6px">${hintText()}</div>
  <h2 style="margin-top:18px">${ctx.mode==='fix'?'Teams':'Player names'}</h2><div id=namesx>${namesX()}</div>
  <button onclick="startX()">Start tournament</button></div>`}
 function startX(){
- const fx=ctx.mode==='fix',min=MIN[d2.fmt],u=unitOf(ctx.mode);
- if(d2.count<min)return toast(`This format needs at least ${min} ${u}`);
+ const fx=ctx.mode==='fix',u=unitOf(ctx.mode),[lo,hi]=KR[d2.ks];
+ if(d2.fmt==='ko'&&(d2.count<lo||d2.count>hi))return toast(`The ${stageName()} take ${lo} to ${hi} ${u}`);
+ if(d2.fmt==='grp'&&d2.count<MIN.grp)return toast(`This format needs at least ${MIN.grp} ${u}`);
  if(d2.fmt==='grp'){const G=d2.groups,n=d2.count;
   if(!(G>=2))return toast('Use at least 2 groups');
   if(n%G)return toast(`${n} ${u} cannot be split into ${G} equal groups`);
   const z=n/G;if(z<2)return toast('Each group needs at least 2 '+u);
-  if(!(d2.q>=1&&d2.q<z))return toast(`Choose between 1 and ${z-1} to advance from each group`)}
+  if(!(d2.q>=1&&d2.q<z))return toast(`Choose between 1 and ${z-1} to advance from each group`);
+  const Q=G*d2.q;if(Q<lo||Q>hi)return toast(`The ${stageName()} need ${lo} to ${hi} ${u} to qualify, you have ${Q}`)}
  const names=d2.names.slice(0,d2.count*(fx?2:1)).map(s=>s.trim());
  if(names.some(x=>!x))return toast('Enter every name');
  if(new Set(names.map(x=>x.toLowerCase())).size<names.length)return toast('Player names must be different');
  const ent=[];for(let i=0;i<d2.count;i++)ent.push(fx?{n:names[2*i]+' & '+names[2*i+1],p:[names[2*i],names[2*i+1]]}:{n:names[i],p:[names[i]]});
- const t={id:Date.now(),name:d2.name.trim()||'Tournament '+(sel().length+1),date:new Date().toISOString().slice(0,10),sport:ctx.sport,mode:ctx.mode,fmt:d2.fmt,ent,m:[],nid:1,po:false,done:false};
+ const t={id:Date.now(),name:d2.name.trim()||'Tournament '+(sel().length+1),date:new Date().toISOString().slice(0,10),sport:ctx.sport,mode:ctx.mode,fmt:d2.fmt,ks:d2.ks,ent,m:[],nid:1,po:false,done:false};
  if(d2.fmt==='ko')addBracket(t,shuffle(ent.map((_,i)=>i)),'P');
  else if(d2.fmt==='grp'){const G=d2.groups,z=ent.length/G,ids=shuffle(ent.map((_,i)=>i));t.groups=[];t.q=d2.q;for(let g=0;g<G;g++){const mem=ids.slice(g*z,(g+1)*z);t.groups.push(mem);addLeagueOf(t,mem,g)}}
  else addLeague(t);
@@ -573,7 +593,7 @@ function vX(){
  settle(t);upd(t);
  const grp=st=>{const g={};t.m.filter(m=>m.st===st).forEach(m=>(g[m.rd]=g[m.rd]||[]).push(m));return Object.keys(g).map(Number).sort((a,b)=>a-b).map(r=>g[r])};
  const hd=ms=>{const l=ms[0].lab;return ms.length>1&&/final$/.test(l)?l+'s':l};
- let h=backH()+`<h1>${esc(t.name)}</h1></div><div class=mu style="margin:-6px 0 12px">${SP[t.sport][1]} ${SP[t.sport][0]}, ${MODES[t.mode]}. ${FMTS[t.fmt]}.</div><div id=xtop>${xTop(t)}</div>`;
+ let h=backH()+`<h1>${esc(t.name)}</h1></div><div class=mu style="margin:-6px 0 12px">${SP[t.sport][1]} ${SP[t.sport][0]}, ${MODES[t.mode]}. ${FMTS[t.fmt]}${t.ks?'. Knockout: '+KS[t.ks]:''}.</div><div id=xtop>${xTop(t)}</div>`;
  if(t.m.some(m=>m.st==='P'))h+=brCard(t);
  h+=grp('P').map(ms=>`<div class=card><h2>${esc(hd(ms))}</h2>${ms.map(m=>mrow(t,m)).join('')}</div>`).join('');
  if(t.fmt==='grp'){
@@ -589,9 +609,9 @@ function okX(t){
  const E=t&&Array.isArray(t.ent)?t.ent.length:-1,I=i=>Number.isInteger(i)&&i>=0&&i<E,N=v=>v===null||(Number.isInteger(v)&&v>=0);
  return E>=2&&typeof t.id==='number'&&typeof t.name==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(t.date)&&!!SP[t.sport]&&(t.mode==='fix'||t.mode==='sgl')&&['ko','grp','qsf','sf'].includes(t.fmt)&&(t.fmt!=='grp'||(Number.isInteger(t.q)&&t.q>=1&&Array.isArray(t.groups)&&t.groups.every(g=>Array.isArray(g)&&g.every(I))))
   &&t.ent.every(e=>e&&typeof e.n==='string'&&Array.isArray(e.p)&&e.p.every(x=>typeof x==='string'))&&Array.isArray(t.m)&&Number.isInteger(t.nid)
-  &&t.m.every(m=>m&&Number.isInteger(m.id)&&(m.st==='L'||m.st==='P')&&Number.isInteger(m.rd)&&(m.a===null||I(m.a))&&(m.b===null||I(m.b))&&N(m.sa)&&N(m.sb)&&(m.ca===undefined||Number.isInteger(m.ca))&&(m.cb===undefined||Number.isInteger(m.cb))&&(m.g===undefined||Number.isInteger(m.g)))
+  &&t.m.every(m=>m&&Number.isInteger(m.id)&&(m.st==='L'||m.st==='P')&&Number.isInteger(m.rd)&&(m.a===null||I(m.a))&&(m.b===null||I(m.b))&&N(m.sa)&&N(m.sb)&&(m.ca===undefined||Number.isInteger(m.ca))&&(m.cb===undefined||Number.isInteger(m.cb))&&(m.g===undefined||Number.isInteger(m.g))&&(t.ks===undefined||t.ks==='qf'||t.ks==='sf'))
   &&new Set(t.m.map(m=>m.id)).size===t.m.length&&t.m.every(m=>m.ca===undefined||(t.m.some(x=>x.id===m.ca)&&t.m.some(x=>x.id===m.cb)))}
-const cleanAny=t=>isRot(t)?clean(t):({id:t.id,name:t.name.slice(0,80),date:t.date,sport:t.sport,mode:t.mode,fmt:t.fmt,groups:t.groups?t.groups.map(g=>g.slice()):undefined,q:t.q,po:!!t.po,done:!!t.done,nid:t.nid,
+const cleanAny=t=>isRot(t)?clean(t):({id:t.id,name:t.name.slice(0,80),date:t.date,sport:t.sport,mode:t.mode,fmt:t.fmt,ks:t.ks==='qf'||t.ks==='sf'?t.ks:undefined,groups:t.groups?t.groups.map(g=>g.slice()):undefined,q:t.q,po:!!t.po,done:!!t.done,nid:t.nid,
  ent:t.ent.map(e=>({n:e.n.slice(0,80),p:e.p.map(x=>x.slice(0,80))})),
  m:t.m.map(m=>({id:m.id,st:m.st,rd:m.rd,pos:Number.isInteger(m.pos)?m.pos:0,lab:typeof m.lab==='string'?m.lab.slice(0,30):'',a:m.a,b:m.b,sa:m.sa,sb:m.sb,ca:m.ca,cb:m.cb,g:m.g,bye:!!m.bye}))});
 
