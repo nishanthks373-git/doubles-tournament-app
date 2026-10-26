@@ -134,7 +134,7 @@ tr.qual:hover td{background:var(--ql)}
 .bcs{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .bc{display:inline-flex;align-items:center;justify-content:center;min-width:34px;height:34px;padding:0 8px;border-radius:17px;font-weight:700;font-size:.85rem;background:#adb5bd;color:#fff;animation:pop .3s var(--ease)}
 .bc.c0{background:#adb5bd}.bc.c1{background:#339af0}.bc.c4{background:#12b886}.bc.c6{background:#7048e8}.bc.cx{background:#f59f00}.bc.cb{background:#fd7e14}.bc.cw{background:#e03131}
-button.bc.pick{background:var(--tint);color:var(--ac);box-shadow:none;width:auto;margin:0}button.bc.pick.wide{padding:0 14px}
+button.bc.pick.sel{background:linear-gradient(90deg,var(--g1),var(--g2));color:#fff}button.bc.pick:disabled{opacity:.45}button.bc.pick{background:var(--tint);color:var(--ac);box-shadow:none;width:auto;margin:0}button.bc.pick.wide{padding:0 14px}
 .bbp{margin:10px 0;padding:12px;border-radius:12px;background:var(--card);border:1px dashed var(--ac);animation:drop .25s var(--ease)}
 .ovr{display:flex;gap:10px;align-items:center;padding:6px 0;border-top:1px solid var(--bd)}.ovr .mu{flex:none;width:58px}
 .keys{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:12px 0}
@@ -788,7 +788,7 @@ function bbSync(t,m){
   if(b.inn[k]&&bbDone(t,m,k)){const S=bbStats(t,m,k);c['r'+n]=S.runs;c['w'+n]=S.wk;c['o'+n]=ovNum(S.legal)}
   else{c['r'+n]=null;c['w'+n]=null;c['o'+n]=null}});
  ckSync(t,m)}
-function bbNewInn(t,bat,bowl){return {bat,bowl,ev:[],cur:{s:0,n:1,b:lineup(t,bowl).length-1},nextIn:2,end:false,setup:true}}
+function bbNewInn(t,bat,bowl){return {bat,bowl,ev:[],cur:{s:0,n:1,b:lineup(t,bowl).length-1},nextIn:2,end:false,setup:true,sel:[],bsel:false,pend:null}}
 function bbToss(){
  const t=T(),m=t.m.find(x=>x.id===ctx.gm),c=m.ck=m.ck||{tw:null,td:null,r1:null,w1:null,o1:null,r2:null,w2:null,o2:null};
  if(!c.tw||!c.td)return toast('Choose who won the toss and what they chose');
@@ -797,13 +797,15 @@ const bbCur=(t,m)=>m.bb.inn[m.bb.inn.length-1];
 function bbAdd(e){
  const t=T(),m=t.m.find(x=>x.id===ctx.gm),k=m.bb.inn.length-1,inn=m.bb.inn[k],L=lineup(t,inn.bat),B=lineup(t,inn.bowl);
  if(bbDone(t,m,k))return;
- e.s=inn.cur.s;e.n=inn.cur.n;e.b=inn.cur.b;e.pre={cur:{...inn.cur},nextIn:inn.nextIn};
+ e.s=inn.cur.s;e.n=inn.cur.n;e.b=inn.cur.b;e.pre={cur:{...inn.cur},nextIn:inn.nextIn,pend:inn.pend?{...inn.pend}:null};
  inn.ev.push(e);
  let rot=0;if(e.t==='bat'||e.t==='nb')rot=e.r;else if(e.t==='bye'||e.t==='lb')rot=e.x;else if(e.t==='wd')rot=e.x-1;
  if(rot%2){const a=inn.cur.s;inn.cur.s=inn.cur.n;inn.cur.n=a}
- if(e.w){const slot=inn.cur.s===e.w.who?'s':'n',used=new Set([inn.cur.s,inn.cur.n]);inn.ev.forEach(x=>{used.add(x.s);used.add(x.n);if(x.w)used.add(x.w.who)});let nx=0;while(nx<L.length&&used.has(nx))nx++;inn.cur[slot]=nx<L.length?nx:null}
  const S=bbStats(t,m,k),lg=e.t==='bat'||e.t==='bye'||e.t==='lb';
- if(lg&&S.legal%6===0&&S.legal>0){const a=inn.cur.s;inn.cur.s=inn.cur.n;inn.cur.n=a;inn.cur.b=(e.b-1+B.length)%B.length;if(B.length>1&&inn.cur.b===e.b)inn.cur.b=(e.b+1)%B.length;if(!bbDone(t,m,k))toast('Over complete. Next bowler: '+B[inn.cur.b])}
+ if(e.w){const used=new Set([inn.cur.s,inn.cur.n]);inn.ev.forEach(x=>{used.add(x.s);used.add(x.n);if(x.w)used.add(x.w.who)});const any=L.some((_,i)=>!used.has(i));
+  if(S.wk<wmax(t)&&any){inn.pend=inn.pend||{bat:null,bowl:false};inn.pend.bat=e.w.who}else{inn.cur[inn.cur.s===e.w.who?'s':'n']=null}}
+ if(lg&&S.legal%6===0&&S.legal>0){const a=inn.cur.s,b2=inn.cur.n;if(a!==null&&b2!==null){inn.cur.s=b2;inn.cur.n=a}
+  if(S.legal<ovOf(t,m)*6&&S.wk<wmax(t)){inn.pend=inn.pend||{bat:null,bowl:false};inn.pend.bowl=true}}
  bbp=null;bbSync(t,m);xcQuiet();render()}
 function xcQuiet(){const t=T();settle(t);klStep(t);upd(t);save()}
 function bbRun(n){bbAdd({t:'bat',r:n})}
@@ -821,20 +823,21 @@ function bbPen(){bbAdd({t:'pen',x:5})}
 function bbUndo(){
  const t=T(),m=t.m.find(x=>x.id===ctx.gm);let inn=bbCur(t,m);
  if(inn.end){inn.end=false}
- else if(!inn.ev.length&&m.bb.inn.length>1){m.bb.inn.pop();inn=bbCur(t,m);const e=inn.ev.pop();if(e){inn.cur=e.pre.cur;inn.nextIn=e.pre.nextIn}}
- else if(inn.ev.length){const e=inn.ev.pop();inn.cur=e.pre.cur;inn.nextIn=e.pre.nextIn}
+ else if(!inn.ev.length&&m.bb.inn.length>1){m.bb.inn.pop();inn=bbCur(t,m);const e=inn.ev.pop();if(e){inn.cur=e.pre.cur;inn.nextIn=e.pre.nextIn;inn.pend=e.pre.pend||null}}
+ else if(inn.ev.length){const e=inn.ev.pop();inn.cur=e.pre.cur;inn.nextIn=e.pre.nextIn;inn.pend=e.pre.pend||null}
  else return toast('Nothing to undo');
  bbp=null;bbSync(t,m);xcQuiet();render()}
 function bbTab(k){const m=T().m.find(x=>x.id===ctx.gm);m.bb.tab=k;save();render()}
-function bbSetup(slot,v){const t=T(),m=t.m.find(x=>x.id===ctx.gm),inn=bbCur(t,m);v=parseInt(v);
- if(slot!=='b'&&inn.cur[slot==='s'?'n':'s']===v){toast('The two openers must be different players');return render()}
- inn.cur[slot]=v;save();render()}
-function bbBegin(){const t=T(),m=t.m.find(x=>x.id===ctx.gm),inn=bbCur(t,m);inn.setup=false;bbp=null;save();render()}
+function bbPickOp(x){const t=T(),m=t.m.find(y=>y.id===ctx.gm),inn=bbCur(t,m);inn.sel=inn.sel||[];const p=inn.sel.indexOf(x);if(p>=0)inn.sel.splice(p,1);else{if(inn.sel.length>=2)inn.sel.shift();inn.sel.push(x)}save();render()}
+function bbPickOb(x){const t=T(),m=t.m.find(y=>y.id===ctx.gm),inn=bbCur(t,m);inn.cur.b=x;inn.bsel=true;save();render()}
+function bbBegin(){const t=T(),m=t.m.find(x=>x.id===ctx.gm),inn=bbCur(t,m);if((inn.sel||[]).length!==2||!inn.bsel)return toast('Choose 2 openers and the opening bowler');inn.cur.s=inn.sel[0];inn.cur.n=inn.sel[1];inn.setup=false;bbp=null;save();render()}
 function bbStrike(i){const t=T(),m=t.m.find(x=>x.id===ctx.gm),inn=bbCur(t,m);if(inn.cur.s===i||bbDone(t,m,m.bb.inn.length-1))return;const a=inn.cur.s;inn.cur.s=inn.cur.n;inn.cur.n=a;save();render()}
 function bbRep(oldI,v){const t=T(),m=t.m.find(x=>x.id===ctx.gm),inn=bbCur(t,m);v=parseInt(v);
  const slot=inn.cur.s===oldI?'s':'n',other=inn.cur[slot==='s'?'n':'s'];
  if(v===other){toast('That batter is already at the crease');return render()}
  inn.cur[slot]=v;save();render()}
+function bbPickBat(x){const t=T(),m=t.m.find(y=>y.id===ctx.gm),inn=bbCur(t,m);if(!inn.pend||inn.pend.bat===null)return;const slot=inn.cur.s===inn.pend.bat?'s':'n';inn.cur[slot]=x;inn.pend.bat=null;if(!inn.pend.bowl)inn.pend=null;save();render()}
+function bbPickBowl(x){const t=T(),m=t.m.find(y=>y.id===ctx.gm),inn=bbCur(t,m);if(!inn.pend||!inn.pend.bowl||inn.pend.bat!==null)return;if(x===inn.cur.b)return toast('The bowler of the last over cannot bowl the next one');inn.cur.b=x;inn.pend.bowl=false;if(inn.pend.bat===null)inn.pend=null;save();render()}
 function bbSet(slot,v){const t=T(),m=t.m.find(x=>x.id===ctx.gm),inn=bbCur(t,m);inn.cur.b=parseInt(v);save();render()}
 function bbSet_old(slot,v){const t=T(),m=t.m.find(x=>x.id===ctx.gm),inn=bbCur(t,m);v=parseInt(v);
  if(slot==='b'){inn.cur.b=v}else{const o=slot==='s'?'n':'s';if(inn.cur[o]===v)inn.cur[o]=inn.cur[slot];inn.cur[slot]=v}
@@ -857,8 +860,11 @@ function vBB(t,m){
   <div class=card><h2>Toss</h2><div class=mu>Toss won by</div><div class=ckr2>${ckSel(m.id,'tw',c.tw,[['a',t.ent[m.a].n],['b',t.ent[m.b].n]])}${ckSel(m.id,'td',c.td,[['bat','chose to bat'],['bowl','chose to bowl']])}</div>
   <div class=mu style="margin-top:8px">Every ball is recorded on the next page.</div><button onclick="bbToss()">Start match</button></div>${ovCard(t,m)}`}
  const b=m.bb,k=b.inn.length-1,inn=b.inn[k],S=bbStats(t,m,k),done=bbDone(t,m,k,S),L=lineup(t,inn.bat),B=lineup(t,inn.bowl),tab=b.tab||'sc';
- if(inn.setup){const sl=(slot,list,val)=>`<select onchange="bbSetup('${slot}',this.value)">${list.map((p,i)=>`<option value=${i} ${i===val?'selected':''}>${esc(p)}</option>`).join('')}</select>`;
-  return backH()+`<h1>${k===0?'1st':'2nd'} innings</h1></div><div class=card><h2>Opening players</h2><div class=mu>${nm(inn.bat)} batting, ${nm(inn.bowl)} bowling. ${k===1?'Target '+(bbStats(t,m,0).runs+1)+'.':''}</div><label>Opening batter, on strike</label>${sl('s',L,inn.cur.s)}<label>Opening batter, non-striker</label>${sl('n',L,inn.cur.n)}<label>Opening bowler</label>${sl('b',B,inn.cur.b)}<button onclick="bbBegin()">Start scoring</button></div>`}
+ if(inn.setup){
+  const sel2=inn.sel||[],pk=(list,on,fn)=>`<div class=bcs>${list.map((p,x)=>`<button class="bc pick wide ${on(x)?'sel':''}" onclick="${fn}(${x})">${esc(p)}</button>`).join('')}</div>`;
+  return backH()+`<h1>${k===0?'1st':'2nd'} innings</h1></div><div class=card><h2>Openers</h2><div class=mu>${nm(inn.bat)} batting. Select the 2 opening batters (${sel2.length} of 2 chosen).${k===1?' Target '+(bbStats(t,m,0).runs+1)+'.':''}</div><div style="margin-top:10px">${pk(L,x=>sel2.includes(x),'bbPickOp')}</div></div>
+  <div class=card><h2>Opening bowler</h2><div class=mu>${nm(inn.bowl)} bowling. Select who bowls the first over.</div><div style="margin-top:10px">${pk(B,x=>inn.bsel&&inn.cur.b===x,'bbPickOb')}</div></div>
+  <button onclick="bbBegin()" ${sel2.length===2&&inn.bsel?'':'disabled'}>Start scoring</button>`}
  const tabs=`<div class="seg bbtabs">${[['sc','Scoring'],['card','Scorecard'],['balls','Balls'],['info','Info']].map(([x,l])=>`<button class="${tab===x?'on':''}" onclick="bbTab('${x}')">${l}</button>`).join('')}</div>`;
  let h=backH()+`<h1>Match centre</h1></div>${tabs}`;
  const S0=k===1?bbStats(t,m,0):null,tgt=S0?S0.runs+1:null;
@@ -887,6 +893,10 @@ function vBB(t,m){
   if(k===0)h+=`<div class="card win"><b>Innings complete</b><div>${esc(t.ent[inn.bat].n)} ${S.runs}-${S.wk} in ${ovTxt(S.legal)} overs.<br>Target ${S.runs+1}.</div><button onclick="bbNext()">Start 2nd innings</button></div>`;
   else{const tx=ckText(t,m);h+=`<div class="card win"><b>Match complete</b><div>${esc(tx)}</div></div>${tbHtml(t,m)?`<div class=card id=tb${m.id}>${tbHtml(t,m)}</div>`:''}<button onclick="goBack()">Back to schedule</button>`}
   h+=`<button class=sec onclick="bbUndo()">↶ Undo last ball</button>`;return h}
+ const pd=inn.pend;
+ if(pd&&pd.bat!==null){const used=new Set([inn.cur.s,inn.cur.n]);Object.keys(S.bt).forEach(i=>used.add(Number(i)));b.inn[k].ev.forEach(x=>{used.add(x.s);used.add(x.n)});const free=L.map((p,i)=>[p,i]).filter(([p,i])=>!used.has(i));
+  return h+`<div class=card><h2>New batter</h2><div class=mu>${esc(L[pd.bat])} is out. Who comes in to bat?</div><div class=bcs style="margin-top:10px">${free.map(([p,i])=>`<button class="bc pick wide" onclick="bbPickBat(${i})">${esc(p)}</button>`).join('')}</div></div><button class=sec onclick="bbUndo()">↶ Undo last ball</button>`}
+ if(pd&&pd.bowl){return h+`<div class=card><h2>Next bowler</h2><div class=mu>Over ${Math.floor(S.legal/6)} is complete. Who bowls the next over? Anyone from ${nm(inn.bowl)} can bowl again, except the bowler of the last over.</div><div class=bcs style="margin-top:10px">${B.map((p,i)=>`<button class="bc pick wide" ${i===inn.cur.b?'disabled':''} onclick="bbPickBowl(${i})">${esc(p)}${i===inn.cur.b?' (last over)':''}</button>`).join('')}</div></div><button class=sec onclick="bbUndo()">↶ Undo last ball</button>`}
  const key=(l,fn,cl)=>`<button class="key ${cl||''}" onclick="${fn}">${l}</button>`;
  const chips=(a,txt)=>`<div class=bbp><div class=mu>${txt}</div><div class=bcs>${a.map(n=>`<button class="bc pick" onclick="bbChip(${n})">${n}</button>`).join('')}</div></div>`;
  if(bbp==='wd')h+=chips([0,1,2,3,4],'Wide. Any extra runs run besides the wide');
@@ -1113,9 +1123,9 @@ function sanBB(b,t){
  const I=(v,mx)=>Number.isInteger(v)&&v>=0&&v<=mx?v:0,N=(v,mx)=>v===null?null:I(v,mx),n=Math.min(Math.max(2,Number.isInteger(t.size)?t.size:11),30),E=t.ent.length;
  const cur=c=>({s:N(c&&c.s,n),n:N(c&&c.n,n),b:I(c&&c.b,n)});
  return {tw:b.tw==='a'||b.tw==='b'?b.tw:'a',td:b.td==='bowl'?'bowl':'bat',tab:['sc','card','balls','info'].includes(b.tab)?b.tab:'sc',
-  inn:b.inn.slice(0,2).map(i=>({bat:I(i.bat,E),bowl:I(i.bowl,E),cur:cur(i.cur),nextIn:I(i.nextIn,n),end:!!i.end,setup:!!i.setup,
+  inn:b.inn.slice(0,2).map(i=>({bat:I(i.bat,E),bowl:I(i.bowl,E),cur:cur(i.cur),nextIn:I(i.nextIn,n),end:!!i.end,setup:!!i.setup,sel:Array.isArray(i.sel)?i.sel.slice(0,2).map(x=>I(x,n)):[],bsel:!!i.bsel,pend:i.pend?{bat:i.pend.bat===null||i.pend.bat===undefined?null:I(i.pend.bat,n),bowl:!!i.pend.bowl}:null,
    ev:(Array.isArray(i.ev)?i.ev:[]).slice(0,3000).map(e=>({t:['bat','wd','nb','bye','lb','pen','ot'].includes(e.t)?e.t:'bat',r:I(e.r,6),x:I(e.x,20),s:I(e.s,n),n:I(e.n,n),b:I(e.b,n),
-    w:e.w?{k:String(e.w.k).slice(0,12),o:e.w.o==='n'?'n':'s',who:I(e.w.who,n)}:undefined,pre:{cur:cur(e.pre&&e.pre.cur),nextIn:I(e.pre&&e.pre.nextIn,n)}}))}))}}
+    w:e.w?{k:String(e.w.k).slice(0,12),o:e.w.o==='n'?'n':'s',who:I(e.w.who,n)}:undefined,pre:{cur:cur(e.pre&&e.pre.cur),nextIn:I(e.pre&&e.pre.nextIn,n),pend:e.pre&&e.pre.pend?{bat:e.pre.pend.bat===null||e.pre.pend.bat===undefined?null:I(e.pre.pend.bat,n),bowl:!!e.pre.pend.bowl}:null}}))}))}}
 const cleanAny=t=>isRot(t)?clean(t):({id:t.id,name:t.name.slice(0,80),date:t.date,sport:t.sport,mode:t.mode,fmt:t.fmt,ks:t.ks==='qf'||t.ks==='sf'?t.ks:undefined,groups:t.groups?t.groups.map(g=>g.slice()):undefined,q:t.q,qx:Number.isInteger(t.qx)?t.qx:undefined,size:Number.isInteger(t.size)?t.size:undefined,pen:!!t.pen,img:imgOk(t.img)?t.img:undefined,bb:!!t.bb,nl:Number.isInteger(t.nl)?t.nl:undefined,lg:Array.isArray(t.lg)?t.lg.filter(Number.isInteger):undefined,ov:Number.isInteger(t.ov)?t.ov:undefined,ro:t.ro&&typeof t.ro==='object'?Object.fromEntries(Object.entries(t.ro).filter(([k,v])=>Number.isInteger(+k)&&+k>=0&&+k<t.ent.length&&Number.isInteger(v)&&v>0&&v<1000)):undefined,pt:Array.isArray(t.pt)?t.pt.map(Number):undefined,po:!!t.po,done:!!t.done,nid:t.nid,
  ent:t.ent.map(e=>({n:e.n.slice(0,80),p:e.p.map(x=>x.slice(0,80)),img:imgOk(e.img)?e.img:undefined})),
  m:t.m.map(m=>({id:m.id,st:m.st,rd:m.rd,pos:Number.isInteger(m.pos)?m.pos:0,lab:typeof m.lab==='string'?m.lab.slice(0,30):'',a:m.a,b:m.b,sa:m.sa,sb:m.sb,ca:m.ca,cb:m.cb,g:m.g,kw:Number.isInteger(m.kw)?m.kw:undefined,bye:!!m.bye,ov:Number.isInteger(m.ov)&&m.ov>=1&&m.ov<=50?m.ov:undefined,bb:sanBB(m.bb,t),ck:m.ck?{tw:m.ck.tw==='a'||m.ck.tw==='b'?m.ck.tw:null,td:m.ck.td==='bat'||m.ck.td==='bowl'?m.ck.td:null,nr:m.ck.nr?1:undefined,...Object.fromEntries(['r1','w1','o1','r2','w2','o2'].map(k=>[k,typeof m.ck[k]==='number'&&isFinite(m.ck[k])&&m.ck[k]>=0?m.ck[k]:null]))}:undefined,dr:m.dr?1:undefined,tb:m.tb?1:undefined,w:m.w==='a'||m.w==='b'?m.w:null}))});
