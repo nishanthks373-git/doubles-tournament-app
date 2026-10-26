@@ -653,24 +653,24 @@ function ckBat(m){const c=m.ck;if(!c||!c.tw||!c.td)return null;return (c.tw==='a
 function ckSync(t,m){
  const c=m.ck;m.sa=null;m.sb=null;
  if(c.nr){m.sa=0;m.sb=0;return ''}
- const bf=ckBat(m);if(!bf||ckNums(c).some(v=>v===null))return '';
+ const bf=ckBat(m);if(!bf||c.r1===null||c.r2===null)return '';
  for(const k of ['1','2']){
   const o=oversVal(c['o'+k]);
-  if(isNaN(o))return 'Overs are written like 18.3, which is 18 overs and 3 balls (the balls go from 0 to 5)';
-  if(o>t.ov+1e-9)return 'An innings has at most '+t.ov+' overs';
-  if(c['w'+k]>wmax(t))return 'Wickets cannot be more than '+wmax(t)}
+  if(o!==null&&isNaN(o))return 'Overs are written like 18.3, which is 18 overs and 3 balls (the balls go from 0 to 5)';
+  if(o!==null&&o>t.ov+1e-9)return 'An innings has at most '+t.ov+' overs';
+  if(c['w'+k]!==null&&c['w'+k]>wmax(t))return 'Wickets cannot be more than '+wmax(t)}
  m.sa=bf==='a'?c.r1:c.r2;m.sb=bf==='a'?c.r2:c.r1;return ''}
 function ckText(t,m){
  const c=m.ck;if(!c)return '';if(c.nr)return 'No result. One point each';
  if(m.sa===null)return '';
  const bf=ckBat(m),first=bf==='a'?m.a:m.b,second=bf==='a'?m.b:m.a,n=i=>t.ent[i].n;
  if(c.r1===c.r2)return 'Match tied';
- return c.r1>c.r2?n(first)+' won by '+(c.r1-c.r2)+(c.r1-c.r2===1?' run':' runs'):n(second)+' won by '+(wmax(t)-c.w2)+(wmax(t)-c.w2===1?' wicket':' wickets')}
+ return c.r1>c.r2?n(first)+' won by '+(c.r1-c.r2)+(c.r1-c.r2===1?' run':' runs'):n(second)+(c.w2===null?' won':' won by '+(wmax(t)-c.w2)+(wmax(t)-c.w2===1?' wicket':' wickets'))}
 function ckOut(m,k,t){return m.ck['w'+k]>=wmax(t)}
 /* per team: runs scored, overs faced, runs conceded, overs bowled. An all-out innings counts the full quota of overs. */
 function nrrOf(t,ms,i){
  let rf=0,of=0,ra=0,ob=0;
- ms.forEach(m=>{if(!m.ck||m.ck.nr||m.sa===null||(m.a!==i&&m.b!==i))return;const c=m.ck,bf=ckBat(m),first=bf===(m.a===i?'a':'b');
+ ms.forEach(m=>{if(!m.ck||m.ck.nr||m.sa===null||ckNums(m.ck).some(v=>v===null)||(m.a!==i&&m.b!==i))return;const c=m.ck,bf=ckBat(m),first=bf===(m.a===i?'a':'b');
   const mine=first?['1']:['2'],opp=first?['2']:['1'];
   const ov=k=>ckOut(m,k,t)?t.ov:oversVal(c['o'+k]);
   rf+=c['r'+mine[0]];of+=ov(mine[0]);ra+=c['r'+opp[0]];ob+=ov(opp[0])});
@@ -756,7 +756,9 @@ function xc(mid){
  const before=new Map(t.m.map(x=>[x.id,x.a+','+x.b]));
  if(!sameScore(m))m.w=null;
  if(sameScore(m)&&!tieOk(m))toast("Scores can't be tied. One side needs more points.");
- if(settle(t))toast('Later matches that depended on this result were cleared');
+ const cleared=settle(t);
+ if(cleared)toast('Later matches that depended on this result were cleared');
+ else if(m.st==='P'&&!m.bye){const w=W(m),par=t.m.find(x=>x.ca===m.id||x.cb===m.id);if(w!==null&&par&&m.adv!==w)toast(t.ent[w].n+' moves on to the '+par.lab);m.adv=w}
  const nb=t.m.length,struct=klStep(t);
  if(struct&&t.m.length<nb)toast('Later rounds that depended on this result were cleared');
  upd(t);save();
