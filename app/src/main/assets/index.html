@@ -747,7 +747,7 @@ function vTeam(){
  return backH()+`<h1>${av(e.img,e.n)}${esc(e.n)}</h1></div>
  <div class=card><h2>Players</h2>${e.p.length?`<ol class=plist>${e.p.map(p=>`<li>${esc(p)}</li>`).join('')}</ol>`:'<p class=mu style="margin:0">No players added yet.</p>'}<button class=sec onclick="go('roster',${t.id})">${e.p.length?'Edit team':'Add players'}</button></div>
  <div class=card><h2>Matches</h2>${ms.length?ms.map(row).join(''):'<p class=mu style="margin:0">No matches yet.</p>'}</div>`}
-function openGame(mid){ctx.gm=mid;go('game',T().id)}
+function openGame(mid){const t=T();if(t.bb&&!rosterOk(t)){toast('Add all the players of every team before starting a game');return go('roster',t.id)}ctx.gm=mid;go('game',t.id)}
 /* ---------- cricket ball-by-ball scoring ---------- */
 let bbp=null;
 const lineup=(t,i)=>Array.from({length:t.size||11},(_,j)=>(t.ent[i].p[j]||'Player '+(j+1)));
@@ -1055,11 +1055,12 @@ function nextT(){
  d2.mem.forEach((a,i)=>{while(a.length<d2.size)a.push('');d2.mem[i]=a.slice(0,d2.size)});
  go('teams')}
 function vTeams(){
- let h=backH()+'<h1>Team names</h1></div><div class=card><p class=mu style="margin-top:0">Name each team. Adding the players is optional. You can also do it later from the tournament page, before or during scoring.</p>';
+ let h=backH()+`<h1>Team names</h1></div><div class=card><p class=mu style="margin-top:0">Name every team. You can rename them later. ${d2.bb?'Every team needs all its players before a match can be scored ball by ball, so you will add them next if any are missing.':'Adding the players is optional. You can also do it later from the tournament page.'}</p>`;
  for(let i=0;i<d2.count;i++)h+=`<div class=tmb>${imgRow(d2.ti[i],'Team logo',`pickImg(v=>{d2.ti[${i}]=v;render()})`,`d2.ti[${i}]=null;render()`)}<input value="${esc(d2.tn[i])}" placeholder="Team ${i+1}" oninput="d2.tn[${i}]=this.value"><details ${d2.mem[i].some(Boolean)?'open':''}><summary>Add players (optional)</summary>${d2.mem[i].map((p,j)=>`<input style="margin-top:6px" value="${esc(p)}" placeholder="Player ${j+1}" oninput="d2.mem[${i}][${j}]=this.value">`).join('')}</details></div>`;
  return h+'<button onclick="startT()">Create schedule</button></div>'}
 function startT(){
- const names=d2.tn.slice(0,d2.count).map((x,i)=>x.trim()||'Team '+(i+1));
+ const names=d2.tn.slice(0,d2.count).map(x=>(x||'').trim());
+ if(names.some(x=>!x))return toast('Enter a name for every team. You can change them later');
  if(new Set(names.map(x=>x.toLowerCase())).size<names.length)return toast('Team names must be different');
  const m=teamMath(d2);if(!m.ok)return toast(m.msg);
  const ent=names.map((n,i)=>({n,p:d2.mem[i].map(x=>x.trim()).filter(Boolean),img:imgOk(d2.ti[i])?d2.ti[i]:undefined}));
@@ -1068,14 +1069,15 @@ function startT(){
  if(d2.fmt==='ko')addBracket(t,shuffle(ent.map((_,i)=>i)),'P');
  else if(d2.fmt==='kl'){t.nl=d2.qt;klRound(t,shuffle(ent.map((_,i)=>i)),0)}
  else{const ids=shuffle(ent.map((_,i)=>i));t.groups=[];t.q=m.q;t.qx=m.qx;for(let g=0;g<m.G;g++){const mem=ids.slice(g*m.z,(g+1)*m.z);t.groups.push(mem);addLeagueOf(t,mem,g)}}
- upd(t);db.t.push(t);save();go('x',t.id)}
+ upd(t);db.t.push(t);save();if(t.bb&&!rosterOk(t)){toast('Add the players of every team before the first match');go('roster',t.id)}else go('x',t.id)}
+const rosterOk=t=>!t.bb||t.ent.every(e=>e.p.length>=(t.size||11));
 function vRoster(){
  const t=T();if(!t){view={n:'home'};return vHome()}
- return backH()+'<h1>Team names and players</h1></div><div class=card><p class=mu style="margin-top:0">Rename a team, change its logo or add players at any time. Changes save automatically.</p>'+imgRow(t.img,'Tournament icon',"pickImg(v=>{T().img=v;save();render()})","delete T().img;save();render()")+
+ return backH()+'<h1>Team names and players</h1></div><div class=card><p class=mu style="margin-top:0">Rename a team, change its logo or add players at any time. Changes save automatically.</p>'+(t.bb?`<div class="bbp" style="margin-top:0"><b>Players are required</b><div class=mu>Every team needs ${t.size} players before a match can be scored ball by ball. ${t.ent.filter(e=>e.p.length>=t.size).length} of ${t.ent.length} teams are complete.</div>${rosterOk(t)?`<button onclick="go('x',${t.id})">Done, go to the schedule</button>`:''}</div>`:'')+imgRow(t.img,'Tournament icon',"pickImg(v=>{T().img=v;save();render()})","delete T().img;save();render()")+
   t.ent.map((e,i)=>`<div class=tmb>${imgRow(e.img,'Team logo',`pickImg(v=>{T().ent[${i}].img=v;save();render()})`,`delete T().ent[${i}].img;save();render()`)}<div class=mu>Team name</div><input value="${esc(e.n)}" onchange="rnT(${i},this.value)"><div class=mu style="margin:8px 0 0">Players</div>${Array.from({length:Math.max(t.size||0,e.p.length)},(_,j)=>`<input style="margin-top:6px" value="${esc(e.p[j]||'')}" placeholder="Player ${j+1}" oninput="rpT(${i},${j},this.value)">`).join('')}</div>`).join('')+'</div>'}
 function rpT(i,j,v){const e=T().ent[i];const a=Array.from({length:Math.max(T().size||0,e.p.length)},(_,k)=>e.p[k]||'');a[j]=v.trim().slice(0,80);e.p=a.filter(Boolean);save()}
 function rnT(i,v){const t=T();v=v.trim().slice(0,80);if(!v||t.ent.some((e,k)=>k!==i&&e.n.toLowerCase()===v.toLowerCase())){toast('Team names must be different and not empty');return render()}t.ent[i].n=v;save()}
-const rosterCard=t=>t.mode==='team'?`<button class=sec onclick="go('roster',${t.id})">👥 Team names and players${t.ent.some(e=>e.p.length)?'':' (not added yet)'}</button>`:'';
+const rosterCard=t=>t.mode==='team'?`<button class="${t.bb&&!rosterOk(t)?'warn':'sec'}" onclick="go('roster',${t.id})">👥 Team names and players${t.bb&&!rosterOk(t)?' (players needed to start)':t.ent.some(e=>e.p.length)?'':' (not added yet)'}</button>`:'';
 /* backup checks for this kind of tournament */
 const okAny=t=>isRot(t)?okT(t):okX(t);
 function okX(t){
