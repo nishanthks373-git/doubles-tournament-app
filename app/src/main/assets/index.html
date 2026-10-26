@@ -119,6 +119,29 @@ tr.qual:hover td{background:var(--ql)}
 .imgrow .av{box-shadow:0 2px 8px rgba(0,0,0,.18)}
 .av{transition:transform .2s var(--ease)}a.tl:hover .av{transform:scale(1.1)}
 #toast{transform:translate(-50%,16px);transition:opacity .25s,transform .3s var(--ease);box-shadow:var(--sh2)}#toast.show,#toast[style*="opacity: 1"]{transform:translate(-50%,0)}
+
+.bbtabs{margin:0 0 12px}.bbtabs button{flex:1;padding:9px 4px;font-size:.85rem}
+.bbhead{text-align:center;background:linear-gradient(135deg,color-mix(in srgb,var(--g1) 12%,var(--card)),color-mix(in srgb,var(--g2) 14%,var(--card)))}
+.bigsc{font-size:3.6rem;font-weight:800;line-height:1.05;background:linear-gradient(90deg,#12b886,#3b5bdb);-webkit-background-clip:text;background-clip:text;color:transparent;margin:2px 0 4px}
+.bbrow{display:flex;justify-content:space-between;align-items:center;color:var(--mu);font-size:.95rem}.bbrow b{color:var(--tx)}
+.bbtg{margin-top:10px;padding-top:8px;border-top:1px dashed var(--bd)}
+.bbh,.bbr{display:grid;grid-template-columns:minmax(0,2.2fr) repeat(5,1fr);gap:4px;align-items:center;text-align:center;padding:6px 0}
+.bbh{color:var(--mu);font-size:.8rem;grid-template-columns:30px minmax(0,1.8fr) repeat(5,1fr)}.bbh b{text-align:left;color:var(--tx)}
+.bbh .pen{width:auto;padding:0;margin:0;background:none;box-shadow:none;font-size:1rem}
+.bbr{border-top:1px solid var(--bd);font-size:.95rem}.bbr .nmx{text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bbr.hl{background:color-mix(in srgb,#f59f00 18%,transparent);border-radius:8px;font-weight:700}
+.bbedit{margin-top:10px;padding:10px;border-radius:12px;background:var(--tint)}
+.bcs{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.bc{display:inline-flex;align-items:center;justify-content:center;min-width:34px;height:34px;padding:0 8px;border-radius:17px;font-weight:700;font-size:.85rem;background:#adb5bd;color:#fff;animation:pop .3s var(--ease)}
+.bc.c0{background:#adb5bd}.bc.c1{background:#339af0}.bc.c4{background:#12b886}.bc.c6{background:#7048e8}.bc.cx{background:#f59f00}.bc.cb{background:#fd7e14}.bc.cw{background:#e03131}
+button.bc.pick{background:var(--tint);color:var(--ac);box-shadow:none;width:auto;margin:0}button.bc.pick.wide{padding:0 14px}
+.bbp{margin:10px 0;padding:12px;border-radius:12px;background:var(--card);border:1px dashed var(--ac);animation:drop .25s var(--ease)}
+.ovr{display:flex;gap:10px;align-items:center;padding:6px 0;border-top:1px solid var(--bd)}.ovr .mu{flex:none;width:58px}
+.keys{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:12px 0}
+.keys .key{margin:0;padding:15px 0;font-size:1rem;border-radius:14px;color:#fff;background:#4263eb}
+.key.k1{background:linear-gradient(135deg,#4c6ef5,#3b5bdb)}.key.k4{background:linear-gradient(135deg,#20c997,#12b886)}.key.k6{background:linear-gradient(135deg,#9775fa,#7048e8)}
+.key.kx{background:linear-gradient(135deg,#ffa94d,#f08c00)}.key.k0{background:linear-gradient(135deg,#adb5bd,#868e96)}.key.km{background:var(--tint);color:var(--ac);box-shadow:none;font-size:.8rem}
+.key.ku{background:linear-gradient(135deg,#868e96,#495057)}.key.kw{background:linear-gradient(135deg,#ff6b6b,#e03131)}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 </style></head><body>
 <div class="wrap" id="app"></div><div id="toast"></div>
@@ -696,7 +719,7 @@ function ckc(id){
  ckSync(t,m);save();
  if(bad){toast(bad);const e=document.getElementById('m'+id);if(e&&e.isConnected)e.outerHTML=mrowFull(t,m)}
  xc(id)}
-function cks(id,k,v){if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();const t=T(),m=t.m.find(x=>x.id===id);if(m.st==='L'&&t.po)return;m.ck[k]=v===''?null:v;ckSync(t,m);save();const e=document.getElementById('m'+id);if(e)e.outerHTML=mrowFull(t,m);xc(id)}
+function cks(id,k,v){if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();const t=T(),m=t.m.find(x=>x.id===id);if(m.st==='L'&&t.po)return;m.ck[k]=v===''?null:v;ckSync(t,m);save();const e=document.getElementById('m'+id);if(e)e.outerHTML=mrowFull(t,m);else if(t.bb)render();xc(id)}
 /* ---------- pictures for tournaments and teams, and the page for one game ---------- */
 const imgOk=v=>typeof v==='string'&&/^data:image\/jpeg;base64,[A-Za-z0-9+\/=]{20,60000}$/.test(v);
 const av=(src,name)=>imgOk(src)?`<img class=av src="${src}" alt="">`:`<span class="av ph">${esc((name||'?').trim().charAt(0).toUpperCase())}</span>`;
@@ -725,11 +748,146 @@ function vTeam(){
  <div class=card><h2>Players</h2>${e.p.length?`<ol class=plist>${e.p.map(p=>`<li>${esc(p)}</li>`).join('')}</ol>`:'<p class=mu style="margin:0">No players added yet.</p>'}<button class=sec onclick="go('roster',${t.id})">${e.p.length?'Edit team':'Add players'}</button></div>
  <div class=card><h2>Matches</h2>${ms.length?ms.map(row).join(''):'<p class=mu style="margin:0">No matches yet.</p>'}</div>`}
 function openGame(mid){ctx.gm=mid;go('game',T().id)}
+/* ---------- cricket ball-by-ball scoring ---------- */
+let bbp=null;
+const lineup=(t,i)=>Array.from({length:t.size||11},(_,j)=>(t.ent[i].p[j]||'Player '+(j+1)));
+const ovTxt=l=>Math.floor(l/6)+'.'+(l%6);
+const ovNum=l=>Math.floor(l/6)+(l%6)/10;
+const WK_BOWLER=['Bowled','Caught','LBW','Stumped','Hit wicket'];
+function bbStats(t,m,k){
+ const inn=m.bb.inn[k],bt={},bw={},oc=[],ob=[],ol=[],balls=[];let runs=0,wk=0,legal=0,ex=0;
+ const gb=i=>bt[i]=bt[i]||{r:0,b:0,f4:0,f6:0,out:null,by:null},gw=i=>bw[i]=bw[i]||{legal:0,r:0,w:0,m:0};
+ inn.ev.forEach(e=>{
+  let tot=0,lg=false,br=0,cc=0,fc=false,lbl='';
+  switch(e.t){
+   case 'bat':tot=e.r;br=e.r;cc=e.r;lg=true;fc=true;lbl=String(e.r);break;
+   case 'nb':tot=e.r+1;br=e.r;cc=e.r+1;fc=true;ex+=1;lbl='Nb'+(e.r?'+'+e.r:'');break;
+   case 'wd':tot=e.x;cc=e.x;ex+=e.x;lbl='Wd'+(e.x>1?'+'+(e.x-1):'');break;
+   case 'bye':tot=e.x;lg=true;fc=true;ex+=e.x;lbl='B'+e.x;break;
+   case 'lb':tot=e.x;lg=true;fc=true;ex+=e.x;lbl='LB'+e.x;break;
+   case 'pen':tot=e.x;ex+=e.x;lbl='P'+e.x;break;
+   case 'ot':tot=e.x;br=e.x;cc=e.x;lbl='OT'+e.x;break}
+  runs+=tot;
+  if(fc)gb(e.s).b++;
+  if(br){const b=gb(e.s);b.r+=br;if(e.t!=='ot'){if(e.r===4)b.f4++;if(e.r===6)b.f6++}}
+  const oi=Math.floor(legal/6);
+  if(e.t!=='pen'){const w=gw(e.b);w.r+=cc;if(lg)w.legal++;if(ob[oi]===undefined)ob[oi]=e.b;oc[oi]=(oc[oi]||0)+cc}
+  if(lg){legal++;ol[oi]=(ol[oi]||0)+1}
+  if(e.w){wk++;const b=gb(e.w.who);b.out=e.w.k;b.by=e.b;if(WK_BOWLER.includes(e.w.k))gw(e.b).w++;lbl=(lbl&&lbl!=='0'?lbl+' ':'')+'W'}
+  (balls[oi]=balls[oi]||[]).push({l:lbl,t:e.t,w:!!e.w,r:e.r||0})});
+ oc.forEach((c,i)=>{if(ol[i]===6&&c===0&&ob[i]!==undefined)gw(ob[i]).m++});
+ return {inn,bt,bw,runs,wk,legal,ex,balls}}
+function bbDone(t,m,k,S){
+ const inn=m.bb.inn[k];S=S||bbStats(t,m,k);
+ if(inn.end||S.wk>=wmax(t)||S.legal>=t.ov*6||inn.cur.s===null||inn.cur.n===null)return true;
+ if(k===1&&S.runs>bbStats(t,m,0).runs)return true;return false}
+function bbSync(t,m){
+ const c=m.ck=m.ck||{tw:null,td:null,r1:null,w1:null,o1:null,r2:null,w2:null,o2:null},b=m.bb;c.tw=b.tw;c.td=b.td;
+ [0,1].forEach(k=>{const n=k+1;
+  if(b.inn[k]&&bbDone(t,m,k)){const S=bbStats(t,m,k);c['r'+n]=S.runs;c['w'+n]=S.wk;c['o'+n]=ovNum(S.legal)}
+  else{c['r'+n]=null;c['w'+n]=null;c['o'+n]=null}});
+ ckSync(t,m)}
+function bbNewInn(t,bat,bowl){return {bat,bowl,ev:[],cur:{s:0,n:1,b:lineup(t,bowl).length-1},nextIn:2,end:false}}
+function bbToss(){
+ const t=T(),m=t.m.find(x=>x.id===ctx.gm),c=m.ck=m.ck||{tw:null,td:null,r1:null,w1:null,o1:null,r2:null,w2:null,o2:null};
+ if(!c.tw||!c.td)return toast('Choose who won the toss and what they chose');
+ const bf=ckBat(m);m.bb={tw:c.tw,td:c.td,tab:'sc',inn:[bbNewInn(t,bf==='a'?m.a:m.b,bf==='a'?m.b:m.a)]};save();render()}
+const bbCur=(t,m)=>m.bb.inn[m.bb.inn.length-1];
+function bbAdd(e){
+ const t=T(),m=t.m.find(x=>x.id===ctx.gm),k=m.bb.inn.length-1,inn=m.bb.inn[k],L=lineup(t,inn.bat),B=lineup(t,inn.bowl);
+ if(bbDone(t,m,k))return;
+ e.s=inn.cur.s;e.n=inn.cur.n;e.b=inn.cur.b;e.pre={cur:{...inn.cur},nextIn:inn.nextIn};
+ inn.ev.push(e);
+ let rot=0;if(e.t==='bat'||e.t==='nb')rot=e.r;else if(e.t==='bye'||e.t==='lb')rot=e.x;else if(e.t==='wd')rot=e.x-1;
+ if(rot%2){const a=inn.cur.s;inn.cur.s=inn.cur.n;inn.cur.n=a}
+ if(e.w){const slot=inn.cur.s===e.w.who?'s':'n';inn.cur[slot]=inn.nextIn<L.length?inn.nextIn++:null}
+ const S=bbStats(t,m,k),lg=e.t==='bat'||e.t==='bye'||e.t==='lb';
+ if(lg&&S.legal%6===0&&S.legal>0){const a=inn.cur.s;inn.cur.s=inn.cur.n;inn.cur.n=a;inn.cur.b=(e.b-1+B.length)%B.length;if(B.length>1&&inn.cur.b===e.b)inn.cur.b=(e.b+1)%B.length;if(!bbDone(t,m,k))toast('Over complete. Next bowler: '+B[inn.cur.b])}
+ bbp=null;bbSync(t,m);xcQuiet();render()}
+function xcQuiet(){const t=T();settle(t);klStep(t);upd(t);save()}
+function bbRun(n){bbAdd({t:'bat',r:n})}
+function bbOpen(k){bbp=bbp===k?null:k;render()}
+function bbChip(n){
+ if(bbp==='wd')bbAdd({t:'wd',x:1+n});else if(bbp==='nb')bbAdd({t:'nb',r:n,x:1});
+ else if(bbp==='bye')bbAdd({t:'bye',x:n});else if(bbp==='lb')bbAdd({t:'lb',x:n});
+ else if(bbp==='ot')bbAdd({t:'ot',x:n});
+ else if(bbp&&bbp.ro){const t=T(),m=t.m.find(x=>x.id===ctx.gm),inn=bbCur(t,m);bbAdd({t:'bat',r:n,w:{k:'Run out',o:bbp.ro,who:bbp.ro==='s'?inn.cur.s:inn.cur.n}})}}
+function bbOut(k){
+ if(k==='Run out'){bbp='ro';return render()}
+ const t=T(),m=t.m.find(x=>x.id===ctx.gm),inn=bbCur(t,m);bbAdd({t:'bat',r:0,w:{k,o:'s',who:inn.cur.s}})}
+function bbRO(o){bbp={ro:o};render()}
+function bbPen(){bbAdd({t:'pen',x:5})}
+function bbUndo(){
+ const t=T(),m=t.m.find(x=>x.id===ctx.gm);let inn=bbCur(t,m);
+ if(inn.end){inn.end=false}
+ else if(!inn.ev.length&&m.bb.inn.length>1){m.bb.inn.pop();inn=bbCur(t,m);const e=inn.ev.pop();if(e){inn.cur=e.pre.cur;inn.nextIn=e.pre.nextIn}}
+ else if(inn.ev.length){const e=inn.ev.pop();inn.cur=e.pre.cur;inn.nextIn=e.pre.nextIn}
+ else return toast('Nothing to undo');
+ bbp=null;bbSync(t,m);xcQuiet();render()}
+function bbTab(k){const m=T().m.find(x=>x.id===ctx.gm);m.bb.tab=k;save();render()}
+function bbSet(slot,v){const t=T(),m=t.m.find(x=>x.id===ctx.gm),inn=bbCur(t,m);v=parseInt(v);
+ if(slot==='b'){inn.cur.b=v}else{const o=slot==='s'?'n':'s';if(inn.cur[o]===v)inn.cur[o]=inn.cur[slot];inn.cur[slot]=v}
+ save();render()}
+function bbNext(){const t=T(),m=t.m.find(x=>x.id===ctx.gm),i0=m.bb.inn[0];m.bb.inn.push(bbNewInn(t,i0.bowl,i0.bat));bbp=null;save();render()}
+function bbEnd(){const t=T(),m=t.m.find(x=>x.id===ctx.gm);bbCur(t,m).end=true;bbp=null;bbSync(t,m);xcQuiet();render()}
+const bbChipCls=e=>e.w?'cw':e.t==='wd'||e.t==='nb'?'cx':e.t==='bye'||e.t==='lb'||e.t==='pen'||e.t==='ot'?'cb':e.r===6?'c6':e.r===4?'c4':e.r===0?'c0':'c1';
+const bbBalls=arr=>(arr||[]).map(e=>`<span class="bc ${bbChipCls(e)}">${esc(e.l)}</span>`).join('');
+function vBB(t,m){
+ const nm=i=>tl(t,i,esc(t.ent[i].n)),where=m.st==='L'&&m.g!==undefined?gname(m.g)+', round '+(m.rd+1):m.st==='L'?'Round '+(m.rd+1):(m.lab||'Match');
+ if(!m.bb){
+  const c=m.ck=m.ck||{tw:null,td:null,r1:null,w1:null,o1:null,r2:null,w2:null,o2:null};
+  return backH()+`<h1>${esc(where)}</h1></div><div class="card gmh"><div class=gt><b>${tnm(t,m.a)}</b></div><div class=vs>versus</div><div class=gt><b>${tnm(t,m.b)}</b></div></div>
+  <div class=card><h2>Toss</h2><div class=mu>Toss won by</div><div class=ckr2>${ckSel(m.id,'tw',c.tw,[['a',t.ent[m.a].n],['b',t.ent[m.b].n]])}${ckSel(m.id,'td',c.td,[['bat','chose to bat'],['bowl','chose to bowl']])}</div>
+  <div class=mu style="margin-top:8px">${t.ov} overs an innings. Every ball is recorded on the next page.</div><button onclick="bbToss()">Start match</button></div>`}
+ const b=m.bb,k=b.inn.length-1,inn=b.inn[k],S=bbStats(t,m,k),done=bbDone(t,m,k,S),L=lineup(t,inn.bat),B=lineup(t,inn.bowl),tab=b.tab||'sc';
+ const tabs=`<div class="seg bbtabs">${[['sc','Scoring'],['card','Scorecard'],['balls','Balls'],['info','Info']].map(([x,l])=>`<button class="${tab===x?'on':''}" onclick="bbTab('${x}')">${l}</button>`).join('')}</div>`;
+ let h=backH()+`<h1>Match centre</h1></div>${tabs}`;
+ const S0=k===1?bbStats(t,m,0):null,tgt=S0?S0.runs+1:null;
+ if(tab==='info'){
+  return h+`<div class=card><h2>Match</h2><p class=mu style="margin:0">${nm(m.a)} versus ${nm(m.b)}<br>${esc(where)}<br>${t.ov} overs an innings<br>Toss: ${esc(t.ent[b.tw==='a'?m.a:m.b].n)} chose to ${b.td}</p></div>`+[m.a,m.b].map(i=>`<div class=card><h2>${esc(t.ent[i].n)}</h2><ol class=plist>${lineup(t,i).map(p=>`<li>${esc(p)}</li>`).join('')}</ol></div>`).join('')}
+ if(tab==='card'||tab==='balls'){
+  return h+b.inn.map((iv,j)=>{const X=bbStats(t,m,j),La=lineup(t,iv.bat),Lb=lineup(t,iv.bowl);
+   if(tab==='balls')return `<div class=card><h2>${j===0?'1st':'2nd'} innings: ${esc(t.ent[iv.bat].n)} ${X.runs}-${X.wk}</h2>${X.balls.length?X.balls.map((o,i)=>`<div class=ovr><span class=mu>Over ${i+1}</span><div class=bcs>${bbBalls(o)}</div></div>`).join(''):'<p class=mu style="margin:0">No balls yet.</p>'}</div>`;
+   const rows=Object.keys(X.bt).map(Number),cur=bbDone(t,m,j,X)?[]:[iv.cur.s,iv.cur.n];
+   return `<div class=card><h2>${j===0?'1st':'2nd'} innings: ${esc(t.ent[iv.bat].n)} ${X.runs}-${X.wk} (${ovTxt(X.legal)} ov)</h2><div class=scr><table><tr><th>Batter</th><th class=r>R</th><th class=r>B</th><th class=r>4s</th><th class=r>6s</th><th class=r>SR</th></tr>${[...new Set([...rows,...cur.filter(x=>x!==null)])].sort((a,b)=>a-b).map(i=>{const x=X.bt[i]||{r:0,b:0,f4:0,f6:0,out:null};return `<tr><td>${esc(La[i])}${x.out?`<div class=mu style="font-size:.75rem">${x.out}${x.by!==null&&WK_BOWLER.includes(x.out)?' b '+esc(Lb[x.by]):''}</div>`:cur.includes(i)?'<div class=mu style="font-size:.75rem">not out</div>':''}</td><td class=r><b>${x.r}</b></td><td class=r>${x.b}</td><td class=r>${x.f4}</td><td class=r>${x.f6}</td><td class=r>${x.b?(x.r*100/x.b).toFixed(1):'0.0'}</td></tr>`}).join('')}</table></div>
+   <p class=mu style="margin:6px 0 10px">Extras ${X.ex}</p><div class=scr><table><tr><th>Bowler</th><th class=r>O</th><th class=r>M</th><th class=r>R</th><th class=r>W</th><th class=r>Eco</th></tr>${Object.keys(X.bw).map(Number).map(i=>{const w=X.bw[i];return `<tr><td>${esc(Lb[i])}</td><td class=r>${ovTxt(w.legal)}</td><td class=r>${w.m}</td><td class=r>${w.r}</td><td class=r><b>${w.w}</b></td><td class=r>${w.legal?(w.r*6/w.legal).toFixed(1):'0.0'}</td></tr>`}).join('')}</table></div></div>`}).join('')}
+ const bst=i=>S.bt[i]||{r:0,b:0,f4:0,f6:0},crr=S.legal?(S.runs*6/S.legal).toFixed(1):'0.0';
+ const left=t.ov*6-S.legal;
+ h+=`<div class="card bbhead"><div class=mu>${nm(inn.bat)} · ${k===0?'1st':'2nd'} innings</div><div class=bigsc>${S.runs}-${S.wk}</div><div class=bbrow><span>Ex ${S.ex}</span><b>Ov ${ovTxt(S.legal)} / ${t.ov}</b><span>CRR ${crr}</span></div>`+
+  (tgt!==null?`<div class=bbtg><b>Target ${tgt}</b>${left>0?` <b>Req. RR ${((tgt-S.runs)*6/left).toFixed(1)}</b>`:''}<div class=mu>Need ${Math.max(0,tgt-S.runs)} runs of ${Math.max(0,left)}</div></div>`:'')+`</div>`;
+ const sel=(slot,list,val)=>`<select onchange="bbSet('${slot}',this.value)">${list.map((p,i)=>`<option value=${i} ${i===val?'selected':''}>${esc(p)}</option>`).join('')}</select>`;
+ const st=inn.cur.s,nn=inn.cur.n,safe=v=>v===null?0:v;
+ const overIdx=Math.max(0,Math.floor((S.legal-(S.legal>0&&S.legal%6===0?1:0))/6));
+ h+=`<div class=card><div class=bbt><div class=bbh><button class="pen" onclick="bbOpen('edit')">✏️</button><b>Batter</b><span>R</span><span>B</span><span>4s</span><span>6s</span><span>SR</span></div>`+
+  [[st,true],[nn,false]].map(([i,hl])=>i===null?'':`<div class="bbr ${hl?'hl':''}"><span class=nmx>${esc(L[i])}${hl?' *':''}</span><span><b>${bst(i).r}</b></span><span>${bst(i).b}</span><span>${bst(i).f4}</span><span>${bst(i).f6}</span><span>${bst(i).b?(bst(i).r*100/bst(i).b).toFixed(0):'0'}</span></div>`).join('')+
+  `<div class=bbh style="margin-top:8px"><button class="pen" onclick="bbOpen('edit')">✏️</button><b>Bowler</b><span>O</span><span>M</span><span>R</span><span>W</span><span>Eco</span></div>`+
+  (()=>{const w=S.bw[inn.cur.b]||{legal:0,m:0,r:0,w:0};return `<div class=bbr><span class=nmx>${esc(B[inn.cur.b])}</span><span>${ovTxt(w.legal)}</span><span>${w.m}</span><span>${w.r}</span><span><b>${w.w}</b></span><span>${w.legal?(w.r*6/w.legal).toFixed(1):'0.0'}</span></div>`})()+`</div>`+
+  (bbp==='edit'?`<div class=bbedit><label>Striker</label>${sel('s',L,safe(st))}<label>Non-striker</label>${sel('n',L,safe(nn))}<label>Bowler</label>${sel('b',B,inn.cur.b)}<button class=sec onclick="bbOpen('edit')">Done</button></div>`:'')+
+  `<div class=bcs style="margin-top:10px">${bbBalls(S.balls[overIdx])}</div></div>`;
+ if(done){
+  if(k===0)h+=`<div class="card win"><b>Innings complete</b><div>${esc(t.ent[inn.bat].n)} ${S.runs}-${S.wk} in ${ovTxt(S.legal)} overs.<br>Target ${S.runs+1}.</div><button onclick="bbNext()">Start 2nd innings</button></div>`;
+  else{const tx=ckText(t,m);h+=`<div class="card win"><b>Match complete</b><div>${esc(tx)}</div></div>${tbHtml(t,m)?`<div class=card id=tb${m.id}>${tbHtml(t,m)}</div>`:''}<button onclick="goBack()">Back to schedule</button>`}
+  h+=`<button class=sec onclick="bbUndo()">↶ Undo last ball</button>`;return h}
+ const key=(l,fn,cl)=>`<button class="key ${cl||''}" onclick="${fn}">${l}</button>`;
+ const chips=(a,txt)=>`<div class=bbp><div class=mu>${txt}</div><div class=bcs>${a.map(n=>`<button class="bc pick" onclick="bbChip(${n})">${n}</button>`).join('')}</div></div>`;
+ if(bbp==='wd')h+=chips([0,1,2,3,4],'Wide. Any extra runs run besides the wide');
+ else if(bbp==='nb')h+=chips([0,1,2,3,4,6],'No ball. Runs off the bat');
+ else if(bbp==='bye')h+=chips([1,2,3,4],'Byes. How many runs');
+ else if(bbp==='lb')h+=chips([1,2,3,4],'Leg byes. How many runs');
+ else if(bbp==='ot')h+=chips([1,2,3,4],'Overthrow runs');
+ else if(bbp==='out')h+=`<div class=bbp><div class=mu>How was the batter out?</div><div class=bcs>${['Bowled','Caught','LBW','Stumped','Hit wicket','Run out'].map(x=>`<button class="bc pick wide" onclick="bbOut('${x}')">${x}</button>`).join('')}</div></div>`;
+ else if(bbp==='ro')h+=`<div class=bbp><div class=mu>Who was run out?</div><div class=bcs><button class="bc pick wide" onclick="bbRO('s')">${esc(L[inn.cur.s])}</button><button class="bc pick wide" onclick="bbRO('n')">${esc(L[inn.cur.n])}</button></div></div>`;
+ else if(bbp&&bbp.ro)h+=chips([0,1,2,3],'Runs completed before the run out');
+ else if(bbp==='more')h+=`<div class=bbp><div class=bcs><button class="bc pick wide" onclick="bbOpen('ot')">Overthrow</button><button class="bc pick wide" onclick="bbEnd()">End innings now</button></div></div>`;
+ h+=`<div class=keys>`+[[1,'k1'],[2,'k1'],[3,'k1'],[4,'k4'],[6,'k6']].map(([n,c])=>key(n,`bbRun(${n})`,c)).join('')+
+  key('LB',"bbOpen('lb')",'kx')+key('Bye',"bbOpen('bye')",'kx')+key('Wide',"bbOpen('wd')",'kx')+key('NB',"bbOpen('nb')",'kx')+key('0',"bbRun(0)",'k0')+
+  key('More',"bbOpen('more')",'km')+key('Penalty','bbPen()','km')+key('Ov.Thrw',"bbOpen('ot')",'km')+key('Undo','bbUndo()','ku')+key('Out',"bbOpen('out')",'kw')+`</div>`;
+ return h}
 function vGame(){
  const t=T(),m=t&&t.m.find(x=>x.id===ctx.gm);if(!m){view={n:'home'};return vHome()}
  const nm=i=>i===null?'To be decided':esc(t.ent[i].n),where=m.st==='L'&&m.g!==undefined?gname(m.g)+', round '+(m.rd+1):m.st==='L'?'Round '+(m.rd+1):(m.lab||'Match');
  let h=backH()+`<h1>${esc(where)}</h1></div><div class="card gmh"><div class=gt><b>${tnm(t,m.a)}</b></div><div class=vs>versus</div><div class=gt><b>${tnm(t,m.b)}</b></div></div>`;
- if(isCk(t)&&t.bb)return h+`<div class=card><h2>Ball-by-ball scoring</h2><p class=mu>Coming soon. This tournament was set up to record every ball, and that part of the app is not ready yet. To enter a match as a final scorecard, start a new tournament and choose No for recording every ball.</p></div>`;
+ if(isCk(t)&&t.bb)return vBB(t,m);
  return h+mrowFull(t,m)}
 const isTeamMode=t=>t.mode==='team';
 const tbName=t=>t.mode==='team'?RULE[t.sport].tbn:'tie-break';
@@ -881,7 +1039,7 @@ function vNewT(){
  <label>Tournament name</label><input value="${esc(d2.name)}" placeholder="e.g. Inter-house cup" oninput="d2.name=this.value">
  ${imgRow(d2.img,'Tournament icon',"pickImg(v=>{d2.img=v;render()})","d2.img=null;render()")}
  <label>Players per team</label><input type=number inputmode=numeric min=1 max=30 value="${d2.size}" oninput="d2.size=parseInt(this.value)||0">
- ${ctx.sport==='cricket'?`<label>Record every ball?</label><div class=seg><button class="${d2.bb?'on':''}" onclick="d2.bb=1;render()">Yes</button><button class="${d2.bb?'':'on'}" onclick="d2.bb=0;render()">No</button></div><div class=mu style="margin-top:6px">${d2.bb?'Ball-by-ball scoring is coming soon. Matches will open a placeholder page for now.':'You enter the toss and the final scorecard of each match.'}</div><label>Overs per innings</label><input type=number inputmode=numeric min=1 max=50 value="${d2.ov}" oninput="d2.ov=parseInt(this.value)||0">`:''}
+ ${ctx.sport==='cricket'?`<label>Record every ball?</label><div class=seg><button class="${d2.bb?'on':''}" onclick="d2.bb=1;render()">Yes</button><button class="${d2.bb?'':'on'}" onclick="d2.bb=0;render()">No</button></div><div class=mu style="margin-top:6px">${d2.bb?'Each match asks for the toss, then opens a live scoring page where you record every ball.':'You enter the toss and the final scorecard of each match.'}</div><label>Overs per innings</label><input type=number inputmode=numeric min=1 max=50 value="${d2.ov}" oninput="d2.ov=parseInt(this.value)||0">`:''}
  <label>Number of teams</label><input type=number inputmode=numeric min=2 max=64 value="${d2.count}" oninput="d2.count=parseInt(this.value)||0;hintT()">
  ${d2.fmt==='kl'?`<label>Teams in the final league</label><input type=number inputmode=numeric min=2 value="${d2.qt}" oninput="d2.qt=parseInt(this.value)||0;hintT()">`:''}
  ${g?`<label>Teams per group</label><input type=number inputmode=numeric min=2 value="${d2.tpg}" oninput="d2.tpg=parseInt(this.value)||0;hintT()"><label>Total teams going to the knockout</label><input type=number inputmode=numeric min=2 value="${d2.qt}" oninput="d2.qt=parseInt(this.value)||0;hintT()">`:''}
@@ -926,9 +1084,17 @@ function okX(t){
   &&(t.mode!=='team'||(Array.isArray(t.pt)&&t.pt.length===2&&t.pt.every(Number.isInteger)))&&(t.qx===undefined||Number.isInteger(t.qx))&&(t.sport!=='cricket'||t.mode!=='team'||(Number.isInteger(t.ov)&&t.ov>=1&&t.ov<=50))&&(t.ro===undefined||(t.ro&&typeof t.ro==='object'))&&t.ent.every(e=>e&&typeof e.n==='string'&&Array.isArray(e.p)&&e.p.every(x=>typeof x==='string'))&&Array.isArray(t.m)&&Number.isInteger(t.nid)
   &&t.m.every(m=>m&&Number.isInteger(m.id)&&(m.st==='L'||m.st==='P'||m.st==='K')&&Number.isInteger(m.rd)&&(m.a===null||I(m.a))&&(m.b===null||I(m.b))&&N(m.sa)&&N(m.sb)&&(m.ca===undefined||Number.isInteger(m.ca))&&(m.cb===undefined||Number.isInteger(m.cb))&&(m.g===undefined||Number.isInteger(m.g))&&(t.ks===undefined||t.ks==='qf'||t.ks==='sf'))
   &&new Set(t.m.map(m=>m.id)).size===t.m.length&&t.m.every(m=>m.ca===undefined||(t.m.some(x=>x.id===m.ca)&&t.m.some(x=>x.id===m.cb)))}
+function sanBB(b,t){
+ if(!b||typeof b!=='object'||!Array.isArray(b.inn))return undefined;
+ const I=(v,mx)=>Number.isInteger(v)&&v>=0&&v<=mx?v:0,N=(v,mx)=>v===null?null:I(v,mx),n=Math.min(Math.max(2,Number.isInteger(t.size)?t.size:11),30),E=t.ent.length;
+ const cur=c=>({s:N(c&&c.s,n),n:N(c&&c.n,n),b:I(c&&c.b,n)});
+ return {tw:b.tw==='a'||b.tw==='b'?b.tw:'a',td:b.td==='bowl'?'bowl':'bat',tab:['sc','card','balls','info'].includes(b.tab)?b.tab:'sc',
+  inn:b.inn.slice(0,2).map(i=>({bat:I(i.bat,E),bowl:I(i.bowl,E),cur:cur(i.cur),nextIn:I(i.nextIn,n),end:!!i.end,
+   ev:(Array.isArray(i.ev)?i.ev:[]).slice(0,3000).map(e=>({t:['bat','wd','nb','bye','lb','pen','ot'].includes(e.t)?e.t:'bat',r:I(e.r,6),x:I(e.x,20),s:I(e.s,n),n:I(e.n,n),b:I(e.b,n),
+    w:e.w?{k:String(e.w.k).slice(0,12),o:e.w.o==='n'?'n':'s',who:I(e.w.who,n)}:undefined,pre:{cur:cur(e.pre&&e.pre.cur),nextIn:I(e.pre&&e.pre.nextIn,n)}}))}))}}
 const cleanAny=t=>isRot(t)?clean(t):({id:t.id,name:t.name.slice(0,80),date:t.date,sport:t.sport,mode:t.mode,fmt:t.fmt,ks:t.ks==='qf'||t.ks==='sf'?t.ks:undefined,groups:t.groups?t.groups.map(g=>g.slice()):undefined,q:t.q,qx:Number.isInteger(t.qx)?t.qx:undefined,size:Number.isInteger(t.size)?t.size:undefined,pen:!!t.pen,img:imgOk(t.img)?t.img:undefined,bb:!!t.bb,nl:Number.isInteger(t.nl)?t.nl:undefined,lg:Array.isArray(t.lg)?t.lg.filter(Number.isInteger):undefined,ov:Number.isInteger(t.ov)?t.ov:undefined,ro:t.ro&&typeof t.ro==='object'?Object.fromEntries(Object.entries(t.ro).filter(([k,v])=>Number.isInteger(+k)&&+k>=0&&+k<t.ent.length&&Number.isInteger(v)&&v>0&&v<1000)):undefined,pt:Array.isArray(t.pt)?t.pt.map(Number):undefined,po:!!t.po,done:!!t.done,nid:t.nid,
  ent:t.ent.map(e=>({n:e.n.slice(0,80),p:e.p.map(x=>x.slice(0,80)),img:imgOk(e.img)?e.img:undefined})),
- m:t.m.map(m=>({id:m.id,st:m.st,rd:m.rd,pos:Number.isInteger(m.pos)?m.pos:0,lab:typeof m.lab==='string'?m.lab.slice(0,30):'',a:m.a,b:m.b,sa:m.sa,sb:m.sb,ca:m.ca,cb:m.cb,g:m.g,kw:Number.isInteger(m.kw)?m.kw:undefined,bye:!!m.bye,ck:m.ck?{tw:m.ck.tw==='a'||m.ck.tw==='b'?m.ck.tw:null,td:m.ck.td==='bat'||m.ck.td==='bowl'?m.ck.td:null,nr:m.ck.nr?1:undefined,...Object.fromEntries(['r1','w1','o1','r2','w2','o2'].map(k=>[k,typeof m.ck[k]==='number'&&isFinite(m.ck[k])&&m.ck[k]>=0?m.ck[k]:null]))}:undefined,dr:m.dr?1:undefined,tb:m.tb?1:undefined,w:m.w==='a'||m.w==='b'?m.w:null}))});
+ m:t.m.map(m=>({id:m.id,st:m.st,rd:m.rd,pos:Number.isInteger(m.pos)?m.pos:0,lab:typeof m.lab==='string'?m.lab.slice(0,30):'',a:m.a,b:m.b,sa:m.sa,sb:m.sb,ca:m.ca,cb:m.cb,g:m.g,kw:Number.isInteger(m.kw)?m.kw:undefined,bye:!!m.bye,bb:sanBB(m.bb,t),ck:m.ck?{tw:m.ck.tw==='a'||m.ck.tw==='b'?m.ck.tw:null,td:m.ck.td==='bat'||m.ck.td==='bowl'?m.ck.td:null,nr:m.ck.nr?1:undefined,...Object.fromEntries(['r1','w1','o1','r2','w2','o2'].map(k=>[k,typeof m.ck[k]==='number'&&isFinite(m.ck[k])&&m.ck[k]>=0?m.ck[k]:null]))}:undefined,dr:m.dr?1:undefined,tb:m.tb?1:undefined,w:m.w==='a'||m.w==='b'?m.w:null}))});
 
 function render(){$('#app').innerHTML={home:vHome,list:vList,exp:vExp,game:vGame,team:vTeam,hub:vHub,mode:vMode,soon:vSoon,fmt:vFmt,newx:vNewX,newt:vNewT,teams:vTeams,roster:vRoster,x:vX,assign:vAssign,new:vNew,t:vT,all:vAll,imp:vImp}[view.n]()}
 render();
