@@ -694,9 +694,9 @@ function ckc(id){
   if(v!==null&&(isNaN(o)||o>t.ov+1e-9)){c['o'+k]=null;bad=isNaN(o)?'Overs are written like 18.3. The balls after the dot go from 0 to 5':'An innings can have at most '+t.ov+' overs. The overs entry was cleared'}
   if(c['w'+k]!==null&&c['w'+k]>wmax(t)){c['w'+k]=null;bad='Wickets can be at most '+wmax(t)+'. The wickets entry was cleared'}});
  ckSync(t,m);save();
- if(bad){toast(bad);const e=document.getElementById('m'+id);if(e)e.outerHTML=mrow(t,m)}
+ if(bad){toast(bad);const e=document.getElementById('m'+id);if(e&&e.isConnected)e.outerHTML=mrowFull(t,m)}
  xc(id)}
-function cks(id,k,v){const t=T(),m=t.m.find(x=>x.id===id);if(m.st==='L'&&t.po)return;m.ck[k]=v===''?null:v;ckSync(t,m);save();const e=document.getElementById('m'+id);if(e)e.outerHTML=mrow(t,m);xc(id)}
+function cks(id,k,v){if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();const t=T(),m=t.m.find(x=>x.id===id);if(m.st==='L'&&t.po)return;m.ck[k]=v===''?null:v;ckSync(t,m);save();const e=document.getElementById('m'+id);if(e)e.outerHTML=mrowFull(t,m);xc(id)}
 /* ---------- pictures for tournaments and teams, and the page for one game ---------- */
 const imgOk=v=>typeof v==='string'&&/^data:image\/jpeg;base64,[A-Za-z0-9+\/=]{20,60000}$/.test(v);
 const av=(src,name)=>imgOk(src)?`<img class=av src="${src}" alt="">`:`<span class="av ph">${esc((name||'?').trim().charAt(0).toUpperCase())}</span>`;
