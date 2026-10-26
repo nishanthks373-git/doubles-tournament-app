@@ -828,15 +828,16 @@ function bbUndo(){
  else return toast('Nothing to undo');
  bbp=null;bbSync(t,m);xcQuiet();render()}
 function bbTab(k){const m=T().m.find(x=>x.id===ctx.gm);m.bb.tab=k;save();render()}
-function bbPickOp(x){const t=T(),m=t.m.find(y=>y.id===ctx.gm),inn=bbCur(t,m);inn.sel=inn.sel||[];const p=inn.sel.indexOf(x);if(p>=0)inn.sel.splice(p,1);else{if(inn.sel.length>=2)inn.sel.shift();inn.sel.push(x)}save();render()}
-function bbPickOb(x){const t=T(),m=t.m.find(y=>y.id===ctx.gm),inn=bbCur(t,m);inn.cur.b=x;inn.bsel=true;save();render()}
+function bbPickOp(x){const t=T(),m=t.m.find(y=>y.id===ctx.gm),inn=bbCur(t,m);inn.sel=inn.sel||[];const p=inn.sel.indexOf(x);if(p>=0)inn.sel.splice(p,1);else if(inn.sel.length<2)inn.sel.push(x);save();render();scrollTo(0,0)}
+function bbResetOp(){const t=T(),m=t.m.find(y=>y.id===ctx.gm),inn=bbCur(t,m);inn.sel=[];inn.bsel=false;save();render()}
+function bbPickOb(x){const t=T(),m=t.m.find(y=>y.id===ctx.gm),inn=bbCur(t,m);inn.cur.b=x;inn.bsel=true;bbBegin();scrollTo(0,0)}
 function bbBegin(){const t=T(),m=t.m.find(x=>x.id===ctx.gm),inn=bbCur(t,m);if((inn.sel||[]).length!==2||!inn.bsel)return toast('Choose 2 openers and the opening bowler');inn.cur.s=inn.sel[0];inn.cur.n=inn.sel[1];inn.setup=false;bbp=null;save();render()}
 function bbStrike(i){const t=T(),m=t.m.find(x=>x.id===ctx.gm),inn=bbCur(t,m);if(inn.cur.s===i||bbDone(t,m,m.bb.inn.length-1))return;const a=inn.cur.s;inn.cur.s=inn.cur.n;inn.cur.n=a;save();render()}
 function bbRep(oldI,v){const t=T(),m=t.m.find(x=>x.id===ctx.gm),inn=bbCur(t,m);v=parseInt(v);
  const slot=inn.cur.s===oldI?'s':'n',other=inn.cur[slot==='s'?'n':'s'];
  if(v===other){toast('That batter is already at the crease');return render()}
  inn.cur[slot]=v;save();render()}
-function bbPickBat(x){const t=T(),m=t.m.find(y=>y.id===ctx.gm),inn=bbCur(t,m);if(!inn.pend||inn.pend.bat===null)return;const slot=inn.cur.s===inn.pend.bat?'s':'n';inn.cur[slot]=x;inn.pend.bat=null;if(!inn.pend.bowl)inn.pend=null;save();render()}
+function bbPickBat(x){const t=T(),m=t.m.find(y=>y.id===ctx.gm),inn=bbCur(t,m);if(!inn.pend||inn.pend.bat===null)return;if(inn.ev.some(y=>y.s===x||y.n===x)||inn.cur.s===x||inn.cur.n===x)return toast('That player has already batted');const slot=inn.cur.s===inn.pend.bat?'s':'n';inn.cur[slot]=x;inn.pend.bat=null;if(!inn.pend.bowl)inn.pend=null;save();render()}
 function bbPickBowl(x){const t=T(),m=t.m.find(y=>y.id===ctx.gm),inn=bbCur(t,m);if(!inn.pend||!inn.pend.bowl||inn.pend.bat!==null)return;if(x===inn.cur.b)return toast('The bowler of the last over cannot bowl the next one');inn.cur.b=x;inn.pend.bowl=false;if(inn.pend.bat===null)inn.pend=null;save();render()}
 function bbSet(slot,v){const t=T(),m=t.m.find(x=>x.id===ctx.gm),inn=bbCur(t,m);inn.cur.b=parseInt(v);save();render()}
 function bbSet_old(slot,v){const t=T(),m=t.m.find(x=>x.id===ctx.gm),inn=bbCur(t,m);v=parseInt(v);
@@ -862,9 +863,9 @@ function vBB(t,m){
  const b=m.bb,k=b.inn.length-1,inn=b.inn[k],S=bbStats(t,m,k),done=bbDone(t,m,k,S),L=lineup(t,inn.bat),B=lineup(t,inn.bowl),tab=b.tab||'sc';
  if(inn.setup){
   const sel2=inn.sel||[],pk=(list,on,fn)=>`<div class=bcs>${list.map((p,x)=>`<button class="bc pick wide ${on(x)?'sel':''}" onclick="${fn}(${x})">${esc(p)}</button>`).join('')}</div>`;
-  return backH()+`<h1>${k===0?'1st':'2nd'} innings</h1></div><div class=card><h2>Openers</h2><div class=mu>${nm(inn.bat)} batting. Select the 2 opening batters (${sel2.length} of 2 chosen).${k===1?' Target '+(bbStats(t,m,0).runs+1)+'.':''}</div><div style="margin-top:10px">${pk(L,x=>sel2.includes(x),'bbPickOp')}</div></div>
-  <div class=card><h2>Opening bowler</h2><div class=mu>${nm(inn.bowl)} bowling. Select who bowls the first over.</div><div style="margin-top:10px">${pk(B,x=>inn.bsel&&inn.cur.b===x,'bbPickOb')}</div></div>
-  <button onclick="bbBegin()" ${sel2.length===2&&inn.bsel?'':'disabled'}>Start scoring</button>`}
+  const tg=k===1?' Target '+(bbStats(t,m,0).runs+1)+'.':'';
+  if(sel2.length<2)return backH()+`<h1>${k===0?'1st':'2nd'} innings</h1></div><div class=card><h2>Select the openers</h2><div class=mu>${nm(inn.bat)} batting. Pick 2 opening batters (${sel2.length} of 2).${tg}</div><div style="margin-top:10px">${pk(L,x=>sel2.includes(x),'bbPickOp')}</div></div>`;
+  return backH()+`<h1>${k===0?'1st':'2nd'} innings</h1></div><div class=card><div class=mu>Openers: <b>${esc(L[sel2[0]])}</b> and <b>${esc(L[sel2[1]])}</b></div><button class=sec onclick="bbResetOp()">Change openers</button></div><div class=card><h2>Select the opening bowler</h2><div class=mu>${nm(inn.bowl)} bowling. Tap who bowls the first over.</div><div style="margin-top:10px">${pk(B,()=>false,'bbPickOb')}</div></div>`}
  const tabs=`<div class="seg bbtabs">${[['sc','Scoring'],['card','Scorecard'],['balls','Balls'],['info','Info']].map(([x,l])=>`<button class="${tab===x?'on':''}" onclick="bbTab('${x}')">${l}</button>`).join('')}</div>`;
  let h=backH()+`<h1>Match centre</h1></div>${tabs}`;
  const S0=k===1?bbStats(t,m,0):null,tgt=S0?S0.runs+1:null;
