@@ -205,7 +205,7 @@ function parentOf(n){
  if(racket()){if(n==='list')p='home';else if(n==='mode')p='list';else if(n==='fmt'||n==='new')p='mode';else if(p==='hub')p='list'}
  else if(p==='mode')p='home';
  return p}
-window.goBack=()=>{if(view.n==='home')return false;if(view.n==='team'&&ctx.tmBack){const b=ctx.tmBack;go(b.n,b.id);return true}const p=parentOf(view.n);if(p==='exp0'){xs.g=null;render();return true}go(p,p==='x'?view.id:undefined);return true};
+window.goBack=()=>{if(view.n==='home')return false;if(view.n==='draw'){const t=T();go(t&&isRot(t)?'t':'x',view.id);return true}if(view.n==='team'&&ctx.tmBack){const b=ctx.tmBack;go(b.n,b.id);return true}const p=parentOf(view.n);if(p==='exp0'){xs.g=null;render();return true}go(p,p==='x'?view.id:undefined);return true};
 function backH(){return '<div class=top><button class=ghost onclick="goBack()">&lsaquo; Back</button>'}
 function newT(){draft={name:'',count:8,names:Array(8).fill('')};go('new')}
 function setCount(v){const c=Math.min(40,Math.max(0,parseInt(v)||0));draft.count=c;while(draft.names.length<c)draft.names.push('');$('#names').innerHTML=namesHtml()}
@@ -283,7 +283,7 @@ function vT(){
  let h=backH()+`<h1>${esc(t.name)}</h1></div>`;
  if(t.done){const w=winners(t);h+=`<div class="card win">🏆 ${w.length>1?'Winners':'Winner'}: <b>${w.map(x=>esc(x.n)).join(' &amp; ')}</b> with ${st[0].ppg} points per game</div>`;if(t.note)h+=`<p class=mu>${t.note}</p>`}
  else{
-  h+=`<div class=card><h2><span class=rnd>Round ${t.rounds.length}</span></h2>`+last.matches.map((m,i)=>`<div class=match>
+  h+=drawCard(t)+`<div class=card><h2><span class=rnd>Round ${t.rounds.length}</span></h2>`+last.matches.map((m,i)=>`<div class=match>
    <div class="ln a"><span class=tm>${tn(t,m.a)}</span><input type=number inputmode=numeric min=0 value="${m.sa===null?'':m.sa}" oninput="sc(${i},'a',this.value)"></div>
    <div class=vs>versus</div>
    <div class="ln b"><span class=tm>${tn(t,m.b)}</span><input type=number inputmode=numeric min=0 value="${m.sb===null?'':m.sb}" oninput="sc(${i},'b',this.value)"></div></div>`).join('');
@@ -1011,6 +1011,45 @@ function vOO(t,m){
  h+=ooSw?swcOO():`<button class=ghost onclick="ooSw=true;render()">Switch to final scorecard entry</button>`;
  return h}
 const swcOO=()=>`<div class=bbp><b>Switch to final scorecard entry?</b><div class=mu>Over-by-over scoring stops for this match. The runs, wickets and overs so far are copied into the scorecard form.</div><div class=bcs style="margin-top:8px"><button class="bc pick wide" onclick="ooSw=false;toSC()">Switch</button><button class="bc pick wide" onclick="ooSw=false;render()">Cancel</button></div></div>`;
+/* ---------- redraw or edit the first round before play starts ---------- */
+const drawStarted=t=>isRot(t)?t.rounds[0].matches.some(m=>m.sa!==null||m.sb!==null):t.m.some(m=>m.sa!==null||m.sb!==null||m.bb||m.oo||m.sc);
+const drawCan=t=>isRot(t)?(!t.done&&t.rounds.length===1&&!drawStarted(t)):(['ko','grp','kl'].includes(t.fmt)&&!drawStarted(t));
+const drawCard=t=>drawCan(t)?`<div class=card><h2>First round draw</h2><p class=mu style="margin:0 0 8px">The tournament has not started yet. You can draw the first round again or change who plays whom.</p><div class=seg><button onclick="redraw()">🔀 Draw again</button><button onclick="go('draw',${t.id})">✏️ Edit the draw</button></div></div>`:'';
+function redraw(){
+ const t=T();if(!drawCan(t))return toast('Scores have been entered, so the draw is locked');
+ if(isRot(t)){t.lvl=0;t.rounds=[];t.rounds.push(makeRound(t))}
+ else if(t.fmt==='ko'){t.m=[];t.nid=1;addBracket(t,shuffle(t.ent.map((_,i)=>i)),'P')}
+ else if(t.fmt==='kl'){t.m=[];t.nid=1;t.lg=null;klRound(t,shuffle(t.ent.map((_,i)=>i)),0)}
+ else if(t.fmt==='grp'){const sizes=t.groups.map(g=>g.length),ids=shuffle(t.ent.map((_,i)=>i));let p=0;t.groups=sizes.map(z=>{const g=ids.slice(p,p+z);p+=z;return g});t.m=t.m.filter(m=>m.st!=='L');t.groups.forEach((g,gi)=>addLeagueOf(t,g,gi))}
+ save();toast('The first round was drawn again');render()}
+function drawSlots(t){
+ const S=[];
+ if(isRot(t)){
+  const r=t.rounds[0],nm=i=>t.players[i];
+  r.matches.forEach((m,i)=>{[['a',0,'Team A'],['a',1,'Team A'],['b',0,'Team B'],['b',1,'Team B']].forEach(([k,j,l])=>S.push({sec:'Match '+(i+1),label:l,get:()=>m[k][j],set:v=>{m[k][j]=v}}))});
+  r.sitting.forEach((p,j)=>S.push({sec:'Sitting out',label:'Player '+(j+1),get:()=>r.sitting[j],set:v=>{r.sitting[j]=v}}));
+  return {S,names:t.players}}
+ if(t.fmt==='grp'){t.groups.forEach((g,gi)=>g.forEach((p,j)=>S.push({sec:gname(gi),label:'Place '+(j+1),get:()=>g[j],set:v=>{g[j]=v}})));return {S,names:t.ent.map(e=>e.n)}}
+ const st=t.fmt==='kl'?'K':'P';
+ t.m.filter(m=>m.st===st&&m.rd===0).forEach((m,i)=>{
+  if(m.bye){const k=m.a!==null?'a':'b';S.push({sec:'Match '+(i+1)+' (bye)',label:'Gets a bye',get:()=>m[k],set:v=>{m[k]=v}})}
+  else{S.push({sec:'Match '+(i+1),label:'First',get:()=>m.a,set:v=>{m.a=v}});S.push({sec:'Match '+(i+1),label:'Second',get:()=>m.b,set:v=>{m.b=v}})}});
+ return {S,names:t.ent.map(e=>e.n)}}
+function vDraw(){
+ const t=T();if(!t||!drawCan(t)){view={n:t?(isRot(t)?'t':'x'):'home',id:t&&t.id};return render0()}
+ const {S,names}=drawSlots(t);let h=backH()+'<h1>Edit the draw</h1></div><p class=mu>Choose a different '+(isRot(t)?'player':t.mode==='fix'||t.mode==='team'?'team':'player')+' for any place. The one you pick swaps with whoever was there before.</p>';
+ let cur=null,open=false;
+ S.forEach((x,i)=>{if(x.sec!==cur){if(open)h+='</div>';h+=`<div class=card><h2>${esc(x.sec)}</h2>`;cur=x.sec;open=true}
+  h+=`<label>${esc(x.label)}</label><select onchange="drawSet(${i},this.value)">${names.map((n,j)=>`<option value=${j} ${j===x.get()?'selected':''}>${esc(n)}</option>`).join('')}</select>`});
+ return h+(open?'</div>':'')+`<button onclick="goBack()">Done</button>`}
+const render0=()=>vHome();
+function drawSet(i,v){
+ const t=T();if(!drawCan(t))return;v=parseInt(v);const {S}=drawSlots(t),x=S[i],old=x.get(),o=S.find(y=>y!==x&&y.get()===v);
+ x.set(v);if(o)o.set(old);
+ if(!isRot(t)){
+  if(t.fmt==='grp'){t.m=t.m.filter(m=>m.st!=='L');t.groups.forEach((g,gi)=>addLeagueOf(t,g,gi))}
+  else{settle(t);klStep(t)}}
+ save();render()}
 function vGame(){
  const t=T(),m=t&&t.m.find(x=>x.id===ctx.gm);if(!m){view={n:'home'};return vHome()}
  const nm=i=>i===null?'To be decided':esc(t.ent[i].n),where=m.st==='L'&&m.g!==undefined?gname(m.g)+', round '+(m.rd+1):m.st==='L'?'Round '+(m.rd+1):(m.lab||'Match');
@@ -1138,7 +1177,7 @@ function vX(){
  const grp=st=>{const g={};t.m.filter(m=>m.st===st).forEach(m=>(g[m.rd]=g[m.rd]||[]).push(m));return Object.keys(g).map(Number).sort((a,b)=>a-b).map(r=>g[r])};
  const hd=ms=>{const l=ms[0].lab;return ms.length>1&&/final$/.test(l)?l+'s':l};
  klStep(t);
- let h=backH()+`<h1>${t.img?av(t.img):''}${esc(t.name)}</h1></div><div class=mu style="margin:-6px 0 12px">${SP[t.sport][1]} ${SP[t.sport][0]}, ${MODES[t.mode]}. ${FMTS[t.fmt]}${t.ks?'. Knockout: '+KS[t.ks]:''}.</div><div id=xtop>${xTop(t)}</div>${rosterCard(t)}`;
+ let h=backH()+`<h1>${t.img?av(t.img):''}${esc(t.name)}</h1></div><div class=mu style="margin:-6px 0 12px">${SP[t.sport][1]} ${SP[t.sport][0]}, ${MODES[t.mode]}. ${FMTS[t.fmt]}${t.ks?'. Knockout: '+KS[t.ks]:''}.</div><div id=xtop>${xTop(t)}</div>${drawCard(t)}${rosterCard(t)}`;
  if(t.m.some(m=>m.st==='P'))h+=brCard(t);
  h+=grp('P').map(ms=>`<div class=card><h2>${esc(hd(ms))}</h2>${ms.map(m=>mrow(t,m)).join('')}</div>`).join('');
  if(t.fmt==='grp'){
@@ -1234,6 +1273,6 @@ const cleanAny=t=>isRot(t)?clean(t):({id:t.id,name:t.name.slice(0,80),date:t.dat
  ent:t.ent.map(e=>({n:e.n.slice(0,80),p:e.p.map(x=>x.slice(0,80)),img:imgOk(e.img)?e.img:undefined})),
  m:t.m.map(m=>({id:m.id,st:m.st,rd:m.rd,pos:Number.isInteger(m.pos)?m.pos:0,lab:typeof m.lab==='string'?m.lab.slice(0,30):'',a:m.a,b:m.b,sa:m.sa,sb:m.sb,ca:m.ca,cb:m.cb,g:m.g,kw:Number.isInteger(m.kw)?m.kw:undefined,bye:!!m.bye,sm:['bb','oo','sc'].includes(m.sm)?m.sm:undefined,sc:m.sc?1:undefined,oo:sanOO(m.oo,t),dcfg:m.dcfg?{d1:!!m.dcfg.d1,d3:!!m.dcfg.d3,sw:m.dcfg.sw!==false}:undefined,ov:Number.isInteger(m.ov)&&m.ov>=1&&m.ov<=50?m.ov:undefined,bb:sanBB(m.bb,t),ck:m.ck?{tw:m.ck.tw==='a'||m.ck.tw==='b'?m.ck.tw:null,td:m.ck.td==='bat'||m.ck.td==='bowl'?m.ck.td:null,nr:m.ck.nr?1:undefined,...Object.fromEntries(['r1','w1','o1','r2','w2','o2'].map(k=>[k,typeof m.ck[k]==='number'&&isFinite(m.ck[k])&&m.ck[k]>=0?m.ck[k]:null]))}:undefined,dr:m.dr?1:undefined,tb:m.tb?1:undefined,w:m.w==='a'||m.w==='b'?m.w:null}))});
 
-function render(){$('#app').innerHTML={home:vHome,list:vList,exp:vExp,game:vGame,team:vTeam,hub:vHub,mode:vMode,soon:vSoon,fmt:vFmt,newx:vNewX,newt:vNewT,teams:vTeams,roster:vRoster,x:vX,assign:vAssign,new:vNew,t:vT,all:vAll,imp:vImp}[view.n]()}
+function render(){$('#app').innerHTML={draw:vDraw,home:vHome,list:vList,exp:vExp,game:vGame,team:vTeam,hub:vHub,mode:vMode,soon:vSoon,fmt:vFmt,newx:vNewX,newt:vNewT,teams:vTeams,roster:vRoster,x:vX,assign:vAssign,new:vNew,t:vT,all:vAll,imp:vImp}[view.n]()}
 render();
 </script></body></html>
