@@ -864,6 +864,19 @@ function bbSet_old(slot,v){const t=T(),m=t.m.find(x=>x.id===ctx.gm),inn=bbCur(t,
 function bbNext(){const t=T(),m=t.m.find(x=>x.id===ctx.gm),i0=m.bb.inn[0];m.bb.inn.push(bbNewInn(t,i0.bowl,i0.bat));bbp=null;save();render()}
 function bbEnd(){const t=T(),m=t.m.find(x=>x.id===ctx.gm);bbCur(t,m).end=true;bbp=null;bbSync(t,m);xcQuiet();render()}
 const swcCard=()=>`<div class=bbp><b>Switch to final scorecard entry?</b><div class=mu>Ball-by-ball scoring stops for this match. The runs, wickets and overs so far are copied into the scorecard form, and you can correct them there.</div><div class=bcs style="margin-top:8px"><button class="bc pick wide" onclick="toSC()">Switch</button><button class="bc pick wide" onclick="bbOpen(null)">Cancel</button></div></div>`;
+const swoCard=()=>`<div class=bbp><b>Switch to over by over scoring?</b><div class=mu>Every finished over is copied across as its runs and wickets. You can't go back to ball by ball afterwards. An over that is still in progress is left empty and you enter its total when it ends.</div><div class=bcs style="margin-top:8px"><button class="bc pick wide" onclick="toOO()">Switch</button><button class="bc pick wide" onclick="bbOpen(null)">Cancel</button></div></div>`;
+function bbOvers(t,m,k){
+ const inn=m.bb.inn[k],ov=ovOf(t,m),rows=Array.from({length:ov},()=>({r:null,w:null,b:6})),acc=[];let legal=0;
+ inn.ev.forEach(e=>{const oi=Math.floor(legal/6),a=acc[oi]=acc[oi]||{r:0,w:0,b:0};let tot=0,lg=false;
+  switch(e.t){case 'bat':tot=e.r;lg=true;break;case 'nb':tot=e.r+1;break;case 'wd':tot=e.x;break;case 'bye':case 'lb':tot=e.x;lg=true;break;case 'pen':case 'ot':tot=e.x;break}
+  a.r+=tot;if(e.w)a.w++;if(lg){a.b++;legal++}});
+ const done=bbDone(t,m,k);acc.forEach((a,i)=>{if(i<ov&&(a.b>=6||done))rows[i]={r:a.r,w:a.w,b:Math.max(1,Math.min(6,a.b))}});
+ return rows}
+function toOO(){
+ const t=T(),m=t.m.find(x=>x.id===ctx.gm);if(!m.bb)return;
+ const c=m.ck=m.ck||{tw:null,td:null,r1:null,w1:null,o1:null,r2:null,w2:null,o2:null};
+ m.oo={tw:m.bb.tw,td:m.bb.td,inn:m.bb.inn.map((iv,k)=>({bat:iv.bat,bowl:iv.bowl,end:!!iv.end&&!(bbStats(t,m,k).legal>=ovOf(t,m)*6),ov:bbOvers(t,m,k)}))};
+ delete m.bb;m.sm='oo';bbp=null;ooSync(t,m);save();xcQuiet();render();scrollTo(0,0)}
 function toSC(){
  const t=T(),m=t.m.find(x=>x.id===ctx.gm),c=m.ck=m.ck||{tw:null,td:null,r1:null,w1:null,o1:null,r2:null,w2:null,o2:null};
  if(m.bb){c.tw=m.bb.tw;c.td=m.bb.td;m.bb.inn.forEach((iv,k)=>{const S=bbStats(t,m,k),n=k+1;if(S.legal>0||S.runs>0){c['r'+n]=S.runs;c['w'+n]=S.wk;c['o'+n]=ovNum(S.legal)}})}
@@ -928,8 +941,9 @@ function vBB(t,m){
  else if(bbp==='out')h+=`<div class=bbp><div class=mu>How was the batter out?</div><div class=bcs>${['Bowled','Caught','LBW','Stumped','Hit wicket','Run out'].map(x=>`<button class="bc pick wide" onclick="bbOut('${x}')">${x}</button>`).join('')}</div></div>`;
  else if(bbp==='ro')h+=`<div class=bbp><div class=mu>Who was run out?</div><div class=bcs><button class="bc pick wide" onclick="bbRO('s')">${esc(L[inn.cur.s])}</button><button class="bc pick wide" onclick="bbRO('n')">${esc(L[inn.cur.n])}</button></div></div>`;
  else if(bbp&&bbp.ro)h+=chips([0,1,2,3],'Runs completed before the run out');
- else if(bbp==='more')h+=`<div class=bbp><div class=bcs><button class="bc pick wide" onclick="bbOpen('ot')">Overthrow</button><button class="bc pick wide" onclick="bbEnd()">End innings now</button><button class="bc pick wide" onclick="bbOpen('swc')">Switch to final scorecard</button></div></div>`;
+ else if(bbp==='more')h+=`<div class=bbp><div class=bcs><button class="bc pick wide" onclick="bbOpen('ot')">Overthrow</button><button class="bc pick wide" onclick="bbEnd()">End innings now</button><button class="bc pick wide" onclick="bbOpen('swo')">Switch to over by over</button><button class="bc pick wide" onclick="bbOpen('swc')">Switch to final scorecard</button></div></div>`;
  else if(bbp==='swc')h+=swcCard();
+ else if(bbp==='swo')h+=swoCard();
  const dcf=b.dc||{};
  h+=((dcf.d1||dcf.d3)?`<div class=keys style="margin-bottom:0">${dcf.d1?key('1 declared','bbDecl(1)','kd'):''}${dcf.d3?key('3 declared','bbDecl(3)','kd'):''}</div>`:'')+`<div class=keys>`+[[1,'k1'],[2,'k1'],[3,'k1'],[4,'k4'],[6,'k6']].map(([n,c])=>key(n,`bbRun(${n})`,c)).join('')+
   key('LB',"bbOpen('lb')",'kx')+key('Bye',"bbOpen('bye')",'kx')+key('Wide',"bbOpen('wd')",'kx')+key('NB',"bbOpen('nb')",'kx')+key('0',"bbRun(0)",'k0')+
