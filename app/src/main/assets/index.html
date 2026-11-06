@@ -789,10 +789,13 @@ function bbSync(t,m){
   else{c['r'+n]=null;c['w'+n]=null;c['o'+n]=null}});
  ckSync(t,m)}
 function bbNewInn(t,bat,bowl){return {bat,bowl,ev:[],cur:{s:0,n:1,b:lineup(t,bowl).length-1},nextIn:2,end:false,setup:true,sel:[],bsel:false,pend:null}}
+const ckStarted=m=>!!(m.ck&&(m.ck.nr||ckNums(m.ck).some(v=>v!==null)));
+const smOf=(t,m)=>m.sm||(t.bb?'bb':'sc');
 function bbToss(){
  const t=T(),m=t.m.find(x=>x.id===ctx.gm),c=m.ck=m.ck||{tw:null,td:null,r1:null,w1:null,o1:null,r2:null,w2:null,o2:null};
  if(!c.tw||!c.td)return toast('Choose who won the toss and what they chose');
- const bf=ckBat(m),bat=bf==='a'?m.a:m.b,bowl=bf==='a'?m.b:m.a,sm=m.sm||'bb';
+ const bf=ckBat(m),bat=bf==='a'?m.a:m.b,bowl=bf==='a'?m.b:m.a,sm=smOf(t,m);
+ if(sm==='bb'&&!(t.ent[m.a].p.length>=t.size&&t.ent[m.b].p.length>=t.size)){toast('Add all '+t.size+' players of both teams before scoring ball by ball');return go('roster',t.id)}
  if(sm==='sc'){m.sc=1;ckSync(t,m)}
  else if(sm==='oo')m.oo={tw:c.tw,td:c.td,inn:[ooNewInn(t,m,bat,bowl)]};
  else{const d=m.dcfg||{};m.bb={tw:c.tw,td:c.td,tab:'sc',dc:{d1:!!d.d1,d3:!!d.d3,sw:d.sw!==false},inn:[bbNewInn(t,bat,bowl)]}}
@@ -800,7 +803,7 @@ function bbToss(){
 function setSm(k){const m=T().m.find(x=>x.id===ctx.gm);m.sm=k;save();render()}
 function setDc(k,v){const m=T().m.find(x=>x.id===ctx.gm);m.dcfg=m.dcfg||{d1:false,d3:false,sw:true};m.dcfg[k]=v;save();render()}
 function vToss(t,m,where){
- const c=m.ck=m.ck||{tw:null,td:null,r1:null,w1:null,o1:null,r2:null,w2:null,o2:null},sm=m.sm||'bb',dc=m.dcfg||{d1:false,d3:false,sw:true};
+ const c=m.ck=m.ck||{tw:null,td:null,r1:null,w1:null,o1:null,r2:null,w2:null,o2:null},sm=smOf(t,m),dc=m.dcfg||{d1:false,d3:false,sw:true};
  const st=(k,l)=>`<button class="${sm===k?'on':''}" onclick="setSm('${k}')">${l}</button>`;
  const desc={bb:'Record every ball with a keypad: runs, extras and wickets.',oo:'Enter the runs and wickets at the end of each over. An over can only be filled once the one before it is done.',sc:'Skip the live scoring and enter the final scorecard after the match.'}[sm];
  return backH()+`<h1>${esc(where)}</h1></div><div class="card gmh"><div class=gt><b>${tnm(t,m.a)}</b></div><div class=vs>versus</div><div class=gt><b>${tnm(t,m.b)}</b></div></div>
@@ -1054,7 +1057,7 @@ function vGame(){
  const t=T(),m=t&&t.m.find(x=>x.id===ctx.gm);if(!m){view={n:'home'};return vHome()}
  const nm=i=>i===null?'To be decided':esc(t.ent[i].n),where=m.st==='L'&&m.g!==undefined?gname(m.g)+', round '+(m.rd+1):m.st==='L'?'Round '+(m.rd+1):(m.lab||'Match');
  let h=backH()+`<h1>${esc(where)}</h1></div><div class="card gmh"><div class=gt><b>${tnm(t,m.a)}</b></div><div class=vs>versus</div><div class=gt><b>${tnm(t,m.b)}</b></div></div>`;
- if(isCk(t)&&t.bb&&!m.sc){if(m.oo)return vOO(t,m);return vBB(t,m)}
+ if(isCk(t)&&!m.sc){if(m.oo)return vOO(t,m);if(m.bb)return vBB(t,m);if(!ckStarted(m))return vToss(t,m,where)}
  if(isCk(t))h+=ovCard(t,m);
  return h+mrowFull(t,m)}
 const isTeamMode=t=>t.mode==='team';
@@ -1207,7 +1210,7 @@ function vNewT(){
  <label>Tournament name</label><input value="${esc(d2.name)}" placeholder="e.g. Inter-house cup" oninput="d2.name=this.value">
  ${imgRow(d2.img,'Tournament icon',"pickImg(v=>{d2.img=v;render()})","d2.img=null;render()")}
  <label>Players per team</label><input type=number inputmode=numeric min=1 max=30 value="${d2.size}" oninput="d2.size=parseInt(this.value)||0">
- ${ctx.sport==='cricket'?`<label>Record every ball?</label><div class=seg><button class="${d2.bb?'on':''}" onclick="d2.bb=1;render()">Yes</button><button class="${d2.bb?'':'on'}" onclick="d2.bb=0;render()">No</button></div><div class=mu style="margin-top:6px">${d2.bb?'Each match asks for the toss, then opens a live scoring page where you record every ball.':'You enter the toss and the final scorecard of each match.'}</div><label>Overs per innings</label><input type=number inputmode=numeric min=1 max=50 value="${d2.ov}" oninput="d2.ov=parseInt(this.value)||0">`:''}
+ ${ctx.sport==='cricket'?`<label>Record every ball by default?</label><div class=seg><button class="${d2.bb?'on':''}" onclick="d2.bb=1;render()">Yes</button><button class="${d2.bb?'':'on'}" onclick="d2.bb=0;render()">No</button></div><div class=mu style="margin-top:6px">Each match still asks how to score it: ball by ball, over by over or final scorecard. This only sets the first choice. ${d2.bb?'Players are needed for ball-by-ball matches.':''}</div><label>Overs per innings</label><input type=number inputmode=numeric min=1 max=50 value="${d2.ov}" oninput="d2.ov=parseInt(this.value)||0">`:''}
  <label>Number of teams</label><input type=number inputmode=numeric min=2 max=64 value="${d2.count}" oninput="d2.count=parseInt(this.value)||0;hintT()">
  ${d2.fmt==='kl'?`<label>Teams in the final league</label><input type=number inputmode=numeric min=2 value="${d2.qt}" oninput="d2.qt=parseInt(this.value)||0;hintT()">`:''}
  ${g?`<label>Teams per group</label><input type=number inputmode=numeric min=2 value="${d2.tpg}" oninput="d2.tpg=parseInt(this.value)||0;hintT()"><label>Total teams going to the knockout</label><input type=number inputmode=numeric min=2 value="${d2.qt}" oninput="d2.qt=parseInt(this.value)||0;hintT()">`:''}
