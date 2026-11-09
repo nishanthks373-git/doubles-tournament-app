@@ -825,7 +825,7 @@ function vToss(t,m,where){
  ${sm==='bb'?`<div class=card><h2>Declared runs</h2><div class=mu>Some games give 1 or 3 runs without the batters running. Does this match use them?</div>
   <label class=nr><input type=checkbox ${dc.d1?'checked':''} onchange="setDc('d1',this.checked)"> 1 declared</label><label class=nr><input type=checkbox ${dc.d3?'checked':''} onchange="setDc('d3',this.checked)"> 3 declared</label>
   ${dc.d1||dc.d3?`<div class=mu style="margin-top:10px">Do the batters change ends on a declared run?</div><div class=seg><button class="${dc.sw!==false?'on':''}" onclick="setDc('sw',true)">Yes</button><button class="${dc.sw===false?'on':''}" onclick="setDc('sw',false)">No</button></div><div class=mu style="margin-top:6px">${dc.sw!==false?'The strike changes after a declared run, like a run taken.':'The same batter stays on strike for the next ball.'}</div>`:''}</div>`:''}
- <button onclick="bbToss()">Start match</button>${ovCard(t,m)}`}
+ ${ovCard(t,m)}${timeCard(t,m)}<button onclick="bbToss()">Start match</button>`}
 const bbCur=(t,m)=>m.bb.inn[m.bb.inn.length-1];
 function bbAdd(e){
  const t=T(),m=t.m.find(x=>x.id===ctx.gm),k=m.bb.inn.length-1,inn=m.bb.inn[k],L=lineup(t,inn.bat),B=lineup(t,inn.bowl);
@@ -1092,12 +1092,12 @@ function ckRestart(){
  delete m.bb;delete m.oo;delete m.sc;m.sa=null;m.sb=null;
  m.ck={tw:null,td:null,r1:null,w1:null,o1:null,r2:null,w2:null,o2:null};
  bbp=null;ooSw=false;save();toast('Match restarted. Start again with the toss');render()}
-const timeCard=(t,m)=>`<div class=card><h2>Time slot</h2>${tmRow(t,m)}</div>`;
+const timeCard=(t,m)=>mStarted(m)?'':`<div class=card><h2>Time slot</h2>${tmRow(t,m)}</div>`;
 function vGame(){
  const t=T(),m=t&&t.m.find(x=>x.id===ctx.gm);if(!m){view={n:'home'};return vHome()}
  const nm=i=>i===null?'To be decided':esc(t.ent[i].n),where=m.st==='L'&&m.g!==undefined?gname(m.g)+', round '+(m.rd+1):m.st==='L'?'Round '+(m.rd+1):(m.lab||'Match');
  let h=backH()+`<h1>${esc(where)}</h1></div><div class="card gmh"><div class=gt><b>${tnm(t,m.a)}</b></div><div class=vs>versus</div><div class=gt><b>${tnm(t,m.b)}</b></div></div>`;
- if(isCk(t)&&!m.sc){if(m.oo)return vOO(t,m)+timeCard(t,m)+restartCard(t,m);if(m.bb)return vBB(t,m)+timeCard(t,m)+restartCard(t,m);if(!ckStarted(m))return vToss(t,m,where)+timeCard(t,m)}
+ if(isCk(t)&&!m.sc){if(m.oo)return vOO(t,m)+timeCard(t,m)+restartCard(t,m);if(m.bb)return vBB(t,m)+timeCard(t,m)+restartCard(t,m);if(!ckStarted(m))return vToss(t,m,where)}
  if(isCk(t))h+=ovCard(t,m);
  return h+mrowFull(t,m)+restartCard(t,m)}
 const isTeamMode=t=>t.mode==='team';
@@ -1110,8 +1110,9 @@ function mrow(t,m){
  const ready=m.a!==null&&m.b!==null,sc=m.sa!==null&&m.sb!==null,nm=i=>i===null?'To be decided':esc(t.ent[i].n),txt=ready?wtxt(t,m):'';
  return `<div class="match cm ${ready?'tap':''}" id=m${m.id} ${ready?`onclick="openGame(${m.id})"`:''}><div class=gl><span class=tm>${tnm(t,m.a)}</span><b class=sc>${sc?m.sa:''}</b></div><div class=gl><span class=tm>${tnm(t,m.b)}</span><b class=sc>${sc?m.sb:''}</b></div><div class=mu id=w${m.id}>${ready?esc(txt||'Tap to enter the score'):''}</div>${tmTxt(m)?`<div class=mu>🕒 ${esc(tmTxt(m))}</div>`:''}</div>`}
 const TMRE=/^\d{4}-\d\d-\d\dT\d\d:\d\d$/;
-const tmTxt=m=>{if(!m.tm||!TMRE.test(m.tm))return '';const d=new Date(m.tm);return isNaN(d)?'':d.toLocaleString([],{weekday:'short',day:'numeric',month:'short',hour:'numeric',minute:'2-digit'})};
-const tmRow=(t,m)=>`<div class=mu style="margin:8px 0 2px">Time slot (optional)</div><div style="display:flex;gap:8px;align-items:center"><input type=datetime-local style="flex:1;min-width:0" value="${m.tm&&TMRE.test(m.tm)?m.tm:''}" onchange="setTm(${m.id},this.value)">${m.tm?`<button class=ghost style="width:auto;margin:0;padding:8px 12px" onclick="setTm(${m.id},'')">Clear</button>`:''}</div>`;
+const mStarted=m=>!!(m.bb||m.oo||m.sc||m.sa!=null||m.sb!=null);
+const tmTxt=m=>{if(mStarted(m)||!m.tm||!TMRE.test(m.tm))return '';const d=new Date(m.tm);return isNaN(d)?'':d.toLocaleString([],{weekday:'short',day:'numeric',month:'short',hour:'numeric',minute:'2-digit'})};
+const tmRow=(t,m)=>mStarted(m)?'':`<div class=mu style="margin:8px 0 2px">Time slot (optional)</div><div style="display:flex;gap:8px;align-items:center"><input type=datetime-local style="flex:1;min-width:0" value="${m.tm&&TMRE.test(m.tm)?m.tm:''}" onchange="setTm(${m.id},this.value)">${m.tm?`<button class=ghost style="width:auto;margin:0;padding:8px 12px" onclick="setTm(${m.id},'')">Clear</button>`:''}</div>`;
 function setTm(id,v){const t=T(),m=t.m.find(x=>x.id===id);if(!m)return;if(v&&TMRE.test(v))m.tm=v;else delete m.tm;if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();save();render()}
 function mrowFull(t,m){
  const nm=i=>i===null?'To be decided':esc(t.ent[i].n);
