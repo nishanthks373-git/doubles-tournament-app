@@ -467,7 +467,7 @@ function doImport(mode){
 act.rep=()=>doImport('replace');
 /* ---- games, modes and formats ---- */
 const SP={pickleball:['Pickleball','🥒',1,'#2f9e44'],badminton:['Badminton','🏸',1,'#3b5bdb'],cricket:['Cricket','🏏',2,'#e8590c'],football:['Football','⚽',2,'#1c7ed6'],tabletennis:['Table tennis','🏓',1,'#d6336c'],tennis:['Tennis','🎾',1,'#f08c00'],basketball:['Basketball','🏀',2,'#d9480f'],volleyball:['Volleyball','🏐',2,'#7048e8'],hockey:['Hockey','🏑',2,'#0c8599']};
-const MAIN=['pickleball','badminton','cricket'],MORE=['football','tabletennis','tennis','basketball','volleyball','hockey'];
+const MAIN=['pickleball','badminton','cricket','football','tennis','tabletennis'],MORE=['basketball','volleyball','hockey'];
 const MODES={rot:'Doubles, rotating partners',fix:'Doubles, fixed partners',sgl:'Singles',team:'Team event'};
 /* rules for team events: can a league match be drawn, league points for a win and a draw, and can a tied knockout be settled by a tie-break */
 const RULE={football:{pen:1,draw:1,pts:[3,1],tb:1,size:11,tbn:'penalty shootout'},hockey:{pen:1,draw:1,pts:[3,1],tb:1,size:11,tbn:'shootout'},cricket:{draw:1,pts:[2,1],tb:1,size:11,tbn:'super over'},basketball:{draw:0,pts:[2,0],tb:0,size:5,tbn:'tie-break'},volleyball:{draw:0,pts:[2,0],tb:0,size:6,tbn:'tie-break'}};
