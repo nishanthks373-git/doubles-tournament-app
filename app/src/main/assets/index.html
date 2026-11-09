@@ -972,20 +972,32 @@ function ooSync(t,m){
  [0,1].forEach(k=>{const n=k+1;const P=b.inn[k]?ooCalc(t,m,k):null;
   if(P&&P.done){c['r'+n]=P.runs;c['w'+n]=P.wk;c['o'+n]=ovNum(P.balls)}else{c['r'+n]=null;c['w'+n]=null;c['o'+n]=null}});
  ckSync(t,m)}
+const ooCum=(inn,i,f)=>inn.ov.slice(0,i).reduce((a,x)=>a+(x[f]||0),0);
+const ooShow=(inn,i,f)=>{const o=inn.ov[i];return o[f]===null?'':ooCum(inn,i,f)+o[f]};
 function ooSet(i,f,v){
+ if(f!=='b')return;
  const t=T(),m=t.m.find(x=>x.id===ctx.gm),inn=m.oo.inn[m.oo.inn.length-1],o=inn.ov[i];
- o[f]=v===''?null:Math.max(0,parseInt(v,10)||0);save()}
+ o.b=Math.max(0,parseInt(v,10)||0);save()}
 function ooChg(i){
- const t=T(),m=t.m.find(x=>x.id===ctx.gm),k=m.oo.inn.length-1,inn=m.oo.inn[k],o=inn.ov[i];
- const before=inn.ov.slice(0,i).reduce((a,x)=>a+(x.w||0),0);
- if(o.w!==null&&before+o.w>wmax(t)){o.w=null;toast('That is more wickets than the team has. The innings can have at most '+wmax(t))}
+ const t=T(),m=t.m.find(x=>x.id===ctx.gm),k=m.oo.inn.length-1,inn=m.oo.inn[k],o=inn.ov[i],nx=inn.ov[i+1];
+ const row=document.getElementById('oor'+i),ins=row?row.querySelectorAll('input'):[];
+ const rd=x=>{const v=x?x.value.trim():'';return v===''?null:Math.max(0,parseInt(v,10)||0)};
+ const tot={r:rd(ins[0]),w:rd(ins[1])};
+ [['r','runs'],['w','wickets']].forEach(([f,nm])=>{
+  const prev=ooCum(inn,i,f),old=o[f];
+  if(tot[f]===null){if(old!==null&&nx&&nx[f]!==null){toast('Clear the later overs first');return}o[f]=null;return}
+  const d=tot[f]-prev;
+  if(d<0){toast('The total '+nm+' cannot be less than the '+prev+' at the end of the last over');return}
+  if(f==='w'&&tot.w>wmax(t)){toast('That is more wickets than the team has. The innings can have at most '+wmax(t));return}
+  if(old!==null&&nx&&nx[f]!==null){const nd=nx[f]-(d-old);if(nd<0){toast('The next over would then have a lower total. Change the later overs first');return}nx[f]=nd}
+  o[f]=d});
  if(o.b<1||o.b>6){o.b=6;toast('An over has between 1 and 6 balls')}
  ooSync(t,m);save();xcQuiet();ooRefresh()}
 function ooRefresh(){
  const t=T(),m=t&&t.m.find(x=>x.id===ctx.gm);if(!m||!m.oo)return;
  const k=m.oo.inn.length-1,P=ooCalc(t,m,k);
  P.rows.forEach((r,i)=>{const row=document.getElementById('oor'+i);if(!row)return;row.classList.toggle('lock',!r.enabled);
-  row.querySelectorAll('input').forEach(x=>{x.disabled=!r.enabled});
+  const ins=row.querySelectorAll('input');ins.forEach(x=>{x.disabled=!r.enabled});const inn=m.oo.inn[k];[['r',0],['w',1]].forEach(([f,j])=>{const v=String(ooShow(inn,i,f));if(ins[j]&&ins[j]!==document.activeElement&&ins[j].value!==v)ins[j].value=v});
   const c=row.querySelector('.cum');if(c)c.textContent=r.filled?r.r+'/'+r.w:(r.enabled?'':'🔒')});
  const hd=document.getElementById('oohead');if(hd)hd.innerHTML=ooHead(t,m,k,P);
  const ft=document.getElementById('oofoot');if(ft)ft.innerHTML=ooFoot(t,m,k,P)}
@@ -1009,9 +1021,9 @@ function vOO(t,m){
  const where=m.st==='L'&&m.g!==undefined?gname(m.g)+', round '+(m.rd+1):m.st==='L'?'Round '+(m.rd+1):(m.lab||'Match'),k=m.oo.inn.length-1,P=ooCalc(t,m,k),inn=P.inn;
  let h=backH()+`<h1>${esc(where)}</h1></div><div class="card bbhead" id=oohead>${ooHead(t,m,k,P)}</div>`;
  if(k===1){const Q=ooCalc(t,m,0);h+=`<div class=card><div class=mu>1st innings: <b>${esc(t.ent[m.oo.inn[0].bat].n)} ${Q.runs}-${Q.wk}</b> in ${ovTxt(Q.balls)} overs</div></div>`}
- h+=`<div class=card><h2>${k===0?'1st':'2nd'} innings, over by over</h2><div class=mu style="margin-bottom:6px">Fill each over when it ends. The next over opens once the one before it is filled. Balls are the legal balls bowled, normally 6.</div>
-  <div class=oolab><span></span><span>Runs</span><span>Wickets</span><span>Balls</span><span>Score</span></div>`+
-  inn.ov.map((o,i)=>{const r=P.rows[i];return `<div class="oor ${r.enabled?'':'lock'}" id=oor${i}><span class=ovn>Over ${i+1}</span><input class=ckn type=number inputmode=numeric min=0 ${r.enabled?'':'disabled'} value="${o.r===null?'':o.r}" oninput="ooSet(${i},'r',this.value)" onchange="ooChg(${i})"><input class=ckn type=number inputmode=numeric min=0 max=${wmax(t)} ${r.enabled?'':'disabled'} value="${o.w===null?'':o.w}" oninput="ooSet(${i},'w',this.value)" onchange="ooChg(${i})"><input class=ckn type=number inputmode=numeric min=1 max=6 ${r.enabled?'':'disabled'} value="${o.b}" oninput="ooSet(${i},'b',this.value)" onchange="ooChg(${i})"><span class=cum>${r.filled?r.r+'/'+r.w:(r.enabled?'':'🔒')}</span></div>`}).join('')+`</div>`;
+ h+=`<div class=card><h2>${k===0?'1st':'2nd'} innings, over by over</h2><div class=mu style="margin-bottom:6px">At the end of each over, enter the team's total score so far: total runs and total wickets after that over, not just that over. The next over opens once the one before it is filled. Balls are the legal balls bowled, normally 6.</div>
+  <div class=oolab><span></span><span>Total runs</span><span>Total wkts</span><span>Balls</span><span>Score</span></div>`+
+  inn.ov.map((o,i)=>{const r=P.rows[i];return `<div class="oor ${r.enabled?'':'lock'}" id=oor${i}><span class=ovn>Over ${i+1}</span><input class=ckn type=number inputmode=numeric min=0 ${r.enabled?'':'disabled'} value="${ooShow(inn,i,'r')}" oninput="ooSet(${i},'r',this.value)" onchange="ooChg(${i})"><input class=ckn type=number inputmode=numeric min=0 max=${wmax(t)} ${r.enabled?'':'disabled'} value="${ooShow(inn,i,'w')}" oninput="ooSet(${i},'w',this.value)" onchange="ooChg(${i})"><input class=ckn type=number inputmode=numeric min=1 max=6 ${r.enabled?'':'disabled'} value="${o.b}" oninput="ooSet(${i},'b',this.value)" onchange="ooChg(${i})"><span class=cum>${r.filled?r.r+'/'+r.w:(r.enabled?'':'🔒')}</span></div>`}).join('')+`</div>`;
  h+=`<div id=oofoot>${ooFoot(t,m,k,P)}</div>`;
  h+=ooSw?swcOO():`<button class=ghost onclick="ooSw=true;render()">Switch to final scorecard entry</button>`;
  return h}
