@@ -453,18 +453,15 @@ function importFile(inp){
  r.onerror=()=>toast('Could not read that file');r.readAsText(f)}
 function vImp(){
  if(!pending){view={n:'home'};return vHome()}
- const p=pending,st=t=>{const l=db.t.find(x=>x.id===t.id);return!l?['new','done']:prog(t)>prog(l)?['further along','live']:['already here','off']};
- const n=p.t.length,c={};p.t.forEach(t=>{const k=st(t)[0];c[k]=(c[k]||0)+1});
- return backH()+'<h1>Import data</h1></div>'+`<div class=card><h2>${n} tournament${n===1?'':'s'} found</h2><p class=mu>${c['new']||0} new, ${c['further along']||0} further along than on this phone, ${c['already here']||0} already here.${p.skipped?' '+p.skipped+' unreadable entries were skipped.':''}</p>
- <button onclick="doImport('merge')">Add to this phone</button><p class=mu>Keeps everything already here, then adds new tournaments and updates ones that are further along.</p>
- <button class="${armed==='rep'?'arm':'danger'}" onclick="arm('rep')">${armed==='rep'?'Tap again to replace everything':'Replace all data on this phone'}</button>
- <button class=sec onclick="pending=null;go('home')">Cancel</button></div><div class=card>${p.t.map(t=>`<div style="padding:6px 0"><b>${esc(t.name)}</b> <span class="tag ${st(t)[1]}">${st(t)[0]}</span><div class=mu>${SP[t.sport]?SP[t.sport][0]+', ':''}${t.date}, ${(t.players||t.ent).length} ${t.players?'players':'entries'}</div></div>`).join('')}</div>`}
-function doImport(mode){
- const p=pending;
- if(mode==='replace')db.t=p.t.slice();
- else p.t.forEach(t=>{const i=db.t.findIndex(x=>x.id===t.id);if(i<0)db.t.push(t);else if(prog(t)>prog(db.t[i]))db.t[i]=t});
- db.t.sort((a,b)=>a.id-b.id);save();pending=null;toast('Import complete');go('home')}
-act.rep=()=>doImport('replace');
+ const p=pending,ex=t=>db.t.some(x=>x.id===t.id),n=p.t.length,e=p.t.filter(ex).length,f=n-e;
+ return backH()+'<h1>Import data</h1></div>'+`<div class=card><h2>${n} tournament${n===1?'':'s'} found</h2><p class=mu>${f} new${e?`, ${e} already on this phone`:''}.${p.skipped?' '+p.skipped+' unreadable entries were skipped.':''} Tournaments on this phone that are not in the file are never removed.</p>
+ ${e?`<h2 style="margin-top:14px">Replace the ${e===1?'tournament that exists':e+' tournaments that exist'}?</h2><p class=mu>${e===1?'It is':'They are'} in the file and on this phone. Replacing swaps ${e===1?'it':'them'} for the version in the file.</p>
+ <button onclick="doImport(true)">Yes, replace ${e===1?'it':'them'}</button><button class=sec onclick="doImport(false)">No, skip ${e===1?'it':'them'}${f?' and add the new ones':''}</button>`:`<button onclick="doImport(false)">Add ${f===1?'it':'them'} to this phone</button>`}
+ <button class=ghost onclick="pending=null;go('home')">Cancel</button></div><div class=card>${p.t.map(t=>`<div style="padding:6px 0"><b>${esc(t.name)}</b> <span class="tag ${ex(t)?'live':'done'}">${ex(t)?'already here':'new'}</span><div class=mu>${SP[t.sport]?SP[t.sport][0]+', ':''}${t.date}, ${(t.players||t.ent).length} ${t.players?'players':'entries'}</div></div>`).join('')}</div>`}
+function doImport(replace){
+ const p=pending;let a=0,r=0,s=0;
+ p.t.forEach(t=>{const i=db.t.findIndex(x=>x.id===t.id);if(i<0){db.t.push(t);a++}else if(replace){db.t[i]=t;r++}else s++});
+ db.t.sort((x,y)=>x.id-y.id);save();pending=null;toast('Import complete: '+a+' added'+(r?', '+r+' replaced':'')+(s?', '+s+' skipped':''));go('home')}
 /* ---- games, modes and formats ---- */
 const PBI="<svg viewBox='0 0 64 64' width='1em' height='1em' style='vertical-align:-.12em' aria-label='Pickleball'><circle cx='32' cy='32' r='30' fill='#e8ef3a' stroke='#8a9a12' stroke-width='3'/><g fill='#8a9a12'><circle cx='32' cy='32' r='3.1'/><circle cx='42.0' cy='32.0' r='3.1'/><circle cx='37.0' cy='40.7' r='3.1'/><circle cx='27.0' cy='40.7' r='3.1'/><circle cx='22.0' cy='32.0' r='3.1'/><circle cx='27.0' cy='23.3' r='3.1'/><circle cx='37.0' cy='23.3' r='3.1'/><circle cx='51.1' cy='37.9' r='3.1'/><circle cx='45.6' cy='46.7' r='3.1'/><circle cx='36.4' cy='51.5' r='3.1'/><circle cx='26.1' cy='51.1' r='3.1'/><circle cx='17.3' cy='45.6' r='3.1'/><circle cx='12.5' cy='36.4' r='3.1'/><circle cx='12.9' cy='26.1' r='3.1'/><circle cx='18.4' cy='17.3' r='3.1'/><circle cx='27.6' cy='12.5' r='3.1'/><circle cx='37.9' cy='12.9' r='3.1'/><circle cx='46.7' cy='18.4' r='3.1'/><circle cx='51.5' cy='27.6' r='3.1'/></g></svg>";
 const SP={pickleball:['Pickleball',PBI,1,'#2f9e44'],badminton:['Badminton','🏸',1,'#3b5bdb'],cricket:['Cricket','🏏',2,'#e8590c'],football:['Football','⚽',2,'#1c7ed6'],tabletennis:['Table tennis','🏓',1,'#d6336c'],tennis:['Tennis','🎾',1,'#f08c00'],basketball:['Basketball','🏀',2,'#d9480f'],volleyball:['Volleyball','🏐',2,'#7048e8'],hockey:['Hockey','🏑',2,'#0c8599']};
