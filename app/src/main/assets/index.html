@@ -231,6 +231,7 @@ function complete(){
  save();render();scrollTo(0,0)}
 const act={
  end(){const t=T(),r=t.rounds[t.rounds.length-1];if(r.matches.every(m=>m.sa!==null&&m.sb!==null))r.closed=true;else t.rounds.pop();t.done=true;save();render()},
+ rst(){ckRestart()},
  del(){db.t=db.t.filter(x=>x.id!==view.id);save();go(hubOf())}};
 function arm(k){if(armed===k){armed=null;act[k]()}else{armed=k;render();setTimeout(()=>{if(armed===k){armed=null;render()}},3000)}}
 
@@ -1054,13 +1055,27 @@ function drawSet(i,v){
   if(t.fmt==='grp'){t.m=t.m.filter(m=>m.st!=='L');t.groups.forEach((g,gi)=>addLeagueOf(t,g,gi))}
   else{settle(t);klStep(t)}}
  save();render()}
+/* restart an unscored match from the toss */
+function ckRestartable(t,m){
+ if(!isCk(t)||t.done||m.bye||m.a===null||m.b===null||W(m)!==null)return false;
+ if(m.oo)return m.oo.inn.length===1&&m.oo.inn[0].ov.every(o=>o.r===null&&o.w===null);
+ if(m.bb)return m.bb.inn.length===1&&m.bb.inn[0].ev.length===0;
+ if(m.sc)return !ckStarted(m);
+ return !!(m.ck&&(m.ck.tw||m.ck.td));
+}
+const restartCard=(t,m)=>ckRestartable(t,m)?`<button class="${armed==='rst'?'arm':'ghost'}" onclick="arm('rst')">${armed==='rst'?'Tap again to restart from the toss':'Restart match from the toss'}</button><p class=mu style="text-align:center">Scoring has not started, so this match can begin again. Once a ball or score is entered it cannot be restarted.</p>`:'';
+function ckRestart(){
+ const t=T(),m=t&&t.m.find(x=>x.id===ctx.gm);if(!m||!ckRestartable(t,m))return render();
+ delete m.bb;delete m.oo;delete m.sc;m.sa=null;m.sb=null;
+ m.ck={tw:null,td:null,r1:null,w1:null,o1:null,r2:null,w2:null,o2:null};
+ bbp=null;ooSw=false;save();toast('Match restarted. Start again with the toss');render()}
 function vGame(){
  const t=T(),m=t&&t.m.find(x=>x.id===ctx.gm);if(!m){view={n:'home'};return vHome()}
  const nm=i=>i===null?'To be decided':esc(t.ent[i].n),where=m.st==='L'&&m.g!==undefined?gname(m.g)+', round '+(m.rd+1):m.st==='L'?'Round '+(m.rd+1):(m.lab||'Match');
  let h=backH()+`<h1>${esc(where)}</h1></div><div class="card gmh"><div class=gt><b>${tnm(t,m.a)}</b></div><div class=vs>versus</div><div class=gt><b>${tnm(t,m.b)}</b></div></div>`;
- if(isCk(t)&&!m.sc){if(m.oo)return vOO(t,m);if(m.bb)return vBB(t,m);if(!ckStarted(m))return vToss(t,m,where)}
+ if(isCk(t)&&!m.sc){if(m.oo)return vOO(t,m)+restartCard(t,m);if(m.bb)return vBB(t,m)+restartCard(t,m);if(!ckStarted(m))return vToss(t,m,where)}
  if(isCk(t))h+=ovCard(t,m);
- return h+mrowFull(t,m)}
+ return h+mrowFull(t,m)+restartCard(t,m)}
 const isTeamMode=t=>t.mode==='team';
 const tbName=t=>t.mode==='team'?RULE[t.sport].tbn:'tie-break';
 const wtxt=(t,m)=>{if(isCk(t)&&m.ck){const c=ckText(t,m);if(c){const w=W(m);return c+(sameScore(m)&&!m.ck.nr?(w!==null?'. Super over won by '+t.ent[w].n:m.tb?'. Choose who won the super over':''):'')}return ''}const w=W(m);if(w!==null)return 'Winner: '+t.ent[w].n+(sameScore(m)?' ('+tbName(t)+')':'');if(sameScore(m))return m.st==='L'&&m.dr&&!m.tb?'Draw':m.tb?'Level. Choose who won the '+tbName(t):"Scores can't be tied";return ''};
