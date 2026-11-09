@@ -197,7 +197,7 @@ function layout(teams,sitting,oc,k){
 
 /* ---- actions ---- */
 let rx={};
-function go(n,id){view={n,id};armed=null;rx={};render();scrollTo(0,0);const a=document.getElementById('app');a.classList.remove('enter');void a.offsetWidth;a.classList.add('enter');clearTimeout(go.h);go.h=setTimeout(()=>a.classList.remove('enter'),700)}
+function go(n,id){view={n,id};armed=null;rx={};if(n!=='roster')ctx.rf=null;render();scrollTo(0,0);const a=document.getElementById('app');a.classList.remove('enter');void a.offsetWidth;a.classList.add('enter');clearTimeout(go.h);go.h=setTimeout(()=>a.classList.remove('enter'),700)}
 const PARENT={team:'x',game:'x',exp:'home',list:'home',hub:'mode',mode:'home',fmt:'hub',newx:'fmt',newt:'fmt',teams:'newt',roster:'x',cap:'x',new:'hub',t:'hub',x:'hub',all:'hub',soon:'home',assign:'home',imp:'home'};
 const racket=()=>SP[ctx.sport]&&SP[ctx.sport][2]===1,hubOf=()=>racket()?'list':'hub';
 function parentOf(n){
@@ -807,7 +807,7 @@ function bbToss(){
  const t=T(),m=t.m.find(x=>x.id===ctx.gm),c=m.ck=m.ck||{tw:null,td:null,r1:null,w1:null,o1:null,r2:null,w2:null,o2:null};
  if(!c.tw||!c.td)return toast('Choose who won the toss and what they chose');
  const bf=ckBat(m),bat=bf==='a'?m.a:m.b,bowl=bf==='a'?m.b:m.a,sm=smOf(t,m);
- if(sm==='bb'&&!(t.ent[m.a].p.length>=t.size&&t.ent[m.b].p.length>=t.size)){toast('Add all '+t.size+' players of both teams before scoring ball by ball');return go('roster',t.id)}
+ if(sm==='bb'&&!(t.ent[m.a].p.length>=t.size&&t.ent[m.b].p.length>=t.size)){toast('Add all '+t.size+' players of both teams before scoring ball by ball');ctx.rf=m.id;return go('roster',t.id)}
  if(sm==='sc'){m.sc=1;ckSync(t,m)}
  else if(sm==='oo')m.oo={tw:c.tw,td:c.td,inn:[ooNewInn(t,m,bat,bowl)]};
  else{const d=m.dcfg||{};m.bb={tw:c.tw,td:c.td,tab:'sc',dc:{d1:!!d.d1,d3:!!d.d3,sw:d.sw!==false},inn:[bbNewInn(t,bat,bowl)]}}
@@ -1285,10 +1285,14 @@ const startBox=t=>t.bb?`<div id=startbox>${rosterOk(t)?`<button onclick="startTo
 function startTour(){const t=T();if(!rosterOk(t))return toast('Add every player first');t.started=true;save();go('x',t.id)}
 function vRoster(){
  const t=T();if(!t){view={n:'home'};return vHome()}
- return backH()+'<h1>Team names and players</h1></div><div class=card><p class=mu style="margin-top:0">Rename a team, change its logo or add players at any time. The first player is the team captain, and every team needs one before any match can start. Players beyond the first '+t.size+' are substitutes. You can pick anyone while scoring, but a team is still all out after '+wmax(t)+' wickets. Changes save automatically.</p>'+(t.bb?`<div class="bbp" style="margin-top:0"><b>Players are required</b><div class=mu>Every team needs ${t.size} players before a match can be scored ball by ball. ${t.ent.filter(e=>e.p.length>=t.size).length} of ${t.ent.length} teams are complete.</div></div>`:'')+imgRow(t.img,'Tournament icon',"pickImg(v=>{T().img=v;save();render()})","delete T().img;save();render()")+
-  t.ent.map((e,i)=>`<div class=tmb>${imgRow(e.img,'Team logo',`pickImg(v=>{T().ent[${i}].img=v;save();render()})`,`delete T().ent[${i}].img;save();render()`)}<div class=mu>Team name</div><input value="${esc(e.n)}" onchange="rnT(${i},this.value)"><div class=mu style="margin:8px 0 0">Players</div>${Array.from({length:Math.max(t.size||0,e.p.length+(rx[i]||0))},(_,j)=>`<input style="margin-top:6px" value="${esc(e.p[j]||'')}" placeholder="${j===0?'Captain (player 1)':j<(t.size||0)?'Player '+(j+1):'Substitute '+(j+1-(t.size||0))}" oninput="rpT(${i},${j},this.value)">`).join('')}${t.mode==='team'&&t.ent[i].p.length+(rx[i]||0)<40?`<button class=sec style="margin-top:8px" onclick="addSub(${i})">+ Add a substitute</button>`:''}</div>`).join('')+'</div>'+startBox(t)}
+ const rm=ctx.rf&&t.m.find(x=>x.id===ctx.rf),sh=rm?[rm.a,rm.b]:null;
+ return backH()+'<h1>'+(rm?'Players for this match':'Team names and players')+'</h1></div><div class=card><p class=mu style="margin-top:0">Rename a team, change its logo or add players at any time. The first player is the team captain, and every team needs one before any match can start. Players beyond the first '+t.size+' are substitutes. You can pick anyone while scoring, but a team is still all out after '+wmax(t)+' wickets. Changes save automatically.</p>'+(t.bb?`<div class="bbp" style="margin-top:0"><b>Players are required</b><div class=mu>Every team needs ${t.size} players before a match can be scored ball by ball. ${t.ent.filter(e=>e.p.length>=t.size).length} of ${t.ent.length} teams are complete.</div></div>`:'')+imgRow(t.img,'Tournament icon',"pickImg(v=>{T().img=v;save();render()})","delete T().img;save();render()")+
+  t.ent.map((e,i)=>sh&&!sh.includes(i)?'':`<div class=tmb>${imgRow(e.img,'Team logo',`pickImg(v=>{T().ent[${i}].img=v;save();render()})`,`delete T().ent[${i}].img;save();render()`)}<div class=mu>Team name</div><input value="${esc(e.n)}" onchange="rnT(${i},this.value)"><div class=mu style="margin:8px 0 0">Players</div>${Array.from({length:Math.max(t.size||0,e.p.length+(rx[i]||0))},(_,j)=>`<input style="margin-top:6px" value="${esc(e.p[j]||'')}" placeholder="${j===0?'Captain (player 1)':j<(t.size||0)?'Player '+(j+1):'Substitute '+(j+1-(t.size||0))}" oninput="rpT(${i},${j},this.value)">`).join('')}${t.mode==='team'&&t.ent[i].p.length+(rx[i]||0)<40?`<button class=sec style="margin-top:8px" onclick="addSub(${i})">+ Add a substitute</button>`:''}</div>`).join('')+'</div>'+rosBox(t)}
+const rfBox=t=>{const m=t.m.find(x=>x.id===ctx.rf),sm=smOf(t,m),n=sm==='bb'?t.size:1,ok=[m.a,m.b].every(i=>t.ent[i].p.length>=n);return `<div id=startbox>${ok?`<button onclick="rfGo()">Continue to the match</button>`:`<button disabled>Continue to the match</button><p class=mu style="text-align:center">${sm==='bb'?'Ball by ball needs all '+t.size+' players of both teams.':'Each team needs a captain.'}</p>`}</div>`};
+const rosBox=t=>ctx.rf&&t.m.some(x=>x.id===ctx.rf)?rfBox(t):startBox(t);
+function rfGo(){const t=T();ctx.gm=ctx.rf;go('game',t.id)}
 function addSub(i){const e=T().ent[i];const need=Math.max(T().size||0,e.p.length)+1;rx[i]=need-e.p.length;render()}
-function rpT(i,j,v){const e=T().ent[i];const a=Array.from({length:Math.max(T().size||0,e.p.length)},(_,k)=>e.p[k]||'');a[j]=v.trim().slice(0,80);e.p=a.filter(Boolean);save();const sb=document.getElementById('startbox');if(sb)sb.outerHTML=startBox(T())}
+function rpT(i,j,v){const e=T().ent[i];const a=Array.from({length:Math.max(T().size||0,e.p.length)},(_,k)=>e.p[k]||'');a[j]=v.trim().slice(0,80);e.p=a.filter(Boolean);save();const sb=document.getElementById('startbox');if(sb)sb.outerHTML=rosBox(T())}
 function rnT(i,v){const t=T();v=v.trim().slice(0,80);if(!v||t.ent.some((e,k)=>k!==i&&e.n.toLowerCase()===v.toLowerCase())){toast('Team names must be different and not empty');return render()}t.ent[i].n=v;save()}
 const rosterCard=t=>t.mode==='team'?`<button class="${!rosterOk(t)?'warn':'sec'}" onclick="go('roster',${t.id})">👥 Team names and players${!rosterOk(t)?(capOk(t)?' (players needed to start)':' (captain needed to start)'):t.ent.some(e=>e.p.length)?'':' (not added yet)'}</button>`:'';
 /* backup checks for this kind of tournament */
