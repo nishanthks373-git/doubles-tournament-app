@@ -198,7 +198,7 @@ function layout(teams,sitting,oc,k){
 /* ---- actions ---- */
 let rx={};
 function go(n,id){view={n,id};armed=null;rx={};render();scrollTo(0,0);const a=document.getElementById('app');a.classList.remove('enter');void a.offsetWidth;a.classList.add('enter');clearTimeout(go.h);go.h=setTimeout(()=>a.classList.remove('enter'),700)}
-const PARENT={team:'x',game:'x',exp:'home',list:'home',hub:'mode',mode:'home',fmt:'hub',newx:'fmt',newt:'fmt',teams:'newt',roster:'x',new:'hub',t:'hub',x:'hub',all:'hub',soon:'home',assign:'home',imp:'home'};
+const PARENT={team:'x',game:'x',exp:'home',list:'home',hub:'mode',mode:'home',fmt:'hub',newx:'fmt',newt:'fmt',teams:'newt',roster:'x',cap:'x',new:'hub',t:'hub',x:'hub',all:'hub',soon:'home',assign:'home',imp:'home'};
 const racket=()=>SP[ctx.sport]&&SP[ctx.sport][2]===1,hubOf=()=>racket()?'list':'hub';
 function parentOf(n){
  if(n==='exp')return xs.g!==null&&xs.back==='home'?'exp0':xs.back;
@@ -750,7 +750,17 @@ function vTeam(){
  return backH()+`<h1>${av(e.img,e.n)}${esc(e.n)}</h1></div>
  <div class=card><h2>Players</h2>${e.p.length?`<ol class=plist>${e.p.map((p,j)=>`<li>${esc(p)}${j===0?' (C)':''}</li>`).join('')}</ol>`:'<p class=mu style="margin:0">No players added yet.</p>'}<button class=sec onclick="go('roster',${t.id})">${e.p.length?'Edit team':'Add players'}</button></div>
  <div class=card><h2>Matches</h2>${ms.length?ms.map(row).join(''):'<p class=mu style="margin:0">No matches yet.</p>'}</div>`}
-function openGame(mid){const t=T();if(!capOk(t)){toast('Every team needs a captain. The first player in the list is the captain');return go('roster',t.id)}if(t.bb&&!rosterOk(t)){toast('Add all the players of every team before starting a game');return go('roster',t.id)}ctx.gm=mid;go('game',t.id)}
+function openGame(mid){const t=T();ctx.gm=mid;const m=t.m.find(x=>x.id===mid);if(t.mode==='team'&&m&&[m.a,m.b].some(i=>i!==null&&!t.ent[i].p.length))return go('cap',t.id);go('game',t.id)}
+function vCap(){
+ const t=T(),m=t&&t.m.find(x=>x.id===ctx.gm);if(!m){view={n:'home'};return vHome()}
+ const need=[m.a,m.b].filter(i=>i!==null&&!t.ent[i].p.length);if(!need.length){return vGame()}
+ return backH()+`<h1>Captain's name</h1></div><div class=card><p class=mu style="margin-top:0">A captain is needed to start a match. Enter the captain of ${need.length>1?'each team':'this team'}. You can add the other players later.</p>`+
+  need.map(i=>`<div class=mu style="margin-top:10px">${esc(t.ent[i].n)}</div><input id=cap${i} placeholder="Captain's name" maxlength=80 autocomplete=off>`).join('')+`<button style="margin-top:14px" onclick="capGo()">Continue</button></div>`}
+function capGo(){
+ const t=T(),m=t.m.find(x=>x.id===ctx.gm),need=[m.a,m.b].filter(i=>i!==null&&!t.ent[i].p.length),vals=need.map(i=>(document.getElementById('cap'+i).value||'').trim().slice(0,80));
+ if(vals.some(v=>!v))return toast('Enter the captain\'s name to start the match');
+ if(new Set(vals.map(v=>v.toLowerCase())).size<vals.length)return toast('The two captains need different names');
+ need.forEach((i,j)=>{t.ent[i].p=[vals[j]]});save();go('game',t.id)}
 /* ---------- cricket ball-by-ball scoring ---------- */
 let bbp=null;
 const lineup=(t,i)=>Array.from({length:Math.max(t.size||11,t.ent[i].p.length)},(_,j)=>(t.ent[i].p[j]||'Player '+(j+1))+(j===0?' (C)':''));
@@ -1268,7 +1278,7 @@ function startT(){
  if(d2.fmt==='ko')addBracket(t,shuffle(ent.map((_,i)=>i)),'P');
  else if(d2.fmt==='kl'){t.nl=d2.qt;klRound(t,shuffle(ent.map((_,i)=>i)),0)}
  else{const ids=shuffle(ent.map((_,i)=>i));t.groups=[];t.q=m.q;t.qx=m.qx;for(let g=0;g<m.G;g++){const mem=ids.slice(g*m.z,(g+1)*m.z);t.groups.push(mem);addLeagueOf(t,mem,g)}}
- upd(t);db.t.push(t);save();if(!rosterOk(t)){toast(capOk(t)?'Add the players of every team before the first match':'Add a captain for every team before the first match');go('roster',t.id)}else go('x',t.id)}
+ upd(t);db.t.push(t);save();go('x',t.id)}
 const capOk=t=>t.mode!=='team'||t.ent.every(e=>e.p.length>=1);
 const rosterOk=t=>capOk(t)&&(!t.bb||t.ent.every(e=>e.p.length>=(t.size||11)));
 const startBox=t=>t.bb?`<div id=startbox>${rosterOk(t)?`<button onclick="startTour()">Start tournament</button>`:`<button disabled>Start tournament</button><p class=mu style="text-align:center">${capOk(t)?'':'Every team needs a captain (the first player). '}Add all ${t.size} players of every team to start. ${t.ent.filter(e=>e.p.length>=t.size).length} of ${t.ent.length} teams are complete.</p>`}</div>`:'';
@@ -1306,6 +1316,6 @@ const cleanAny=t=>isRot(t)?clean(t):({id:t.id,name:t.name.slice(0,80),date:t.dat
  ent:t.ent.map(e=>({n:e.n.slice(0,80),p:e.p.map(x=>x.slice(0,80)),img:imgOk(e.img)?e.img:undefined})),
  m:t.m.map(m=>({id:m.id,st:m.st,rd:m.rd,pos:Number.isInteger(m.pos)?m.pos:0,lab:typeof m.lab==='string'?m.lab.slice(0,30):'',a:m.a,b:m.b,sa:m.sa,sb:m.sb,ca:m.ca,cb:m.cb,g:m.g,kw:Number.isInteger(m.kw)?m.kw:undefined,bye:!!m.bye,sm:['bb','oo','sc'].includes(m.sm)?m.sm:undefined,sc:m.sc?1:undefined,oo:sanOO(m.oo,t),dcfg:m.dcfg?{d1:!!m.dcfg.d1,d3:!!m.dcfg.d3,sw:m.dcfg.sw!==false}:undefined,ov:Number.isInteger(m.ov)&&m.ov>=1&&m.ov<=50?m.ov:undefined,bb:sanBB(m.bb,t),ck:m.ck?{tw:m.ck.tw==='a'||m.ck.tw==='b'?m.ck.tw:null,td:m.ck.td==='bat'||m.ck.td==='bowl'?m.ck.td:null,nr:m.ck.nr?1:undefined,...Object.fromEntries(['r1','w1','o1','r2','w2','o2'].map(k=>[k,typeof m.ck[k]==='number'&&isFinite(m.ck[k])&&m.ck[k]>=0?m.ck[k]:null]))}:undefined,dr:m.dr?1:undefined,tb:m.tb?1:undefined,w:m.w==='a'||m.w==='b'?m.w:null}))});
 
-function render(){$('#app').innerHTML={draw:vDraw,home:vHome,list:vList,exp:vExp,game:vGame,team:vTeam,hub:vHub,mode:vMode,soon:vSoon,fmt:vFmt,newx:vNewX,newt:vNewT,teams:vTeams,roster:vRoster,x:vX,assign:vAssign,new:vNew,t:vT,all:vAll,imp:vImp}[view.n]()}
+function render(){$('#app').innerHTML={draw:vDraw,home:vHome,list:vList,exp:vExp,game:vGame,team:vTeam,hub:vHub,mode:vMode,soon:vSoon,fmt:vFmt,newx:vNewX,newt:vNewT,teams:vTeams,roster:vRoster,cap:vCap,x:vX,assign:vAssign,new:vNew,t:vT,all:vAll,imp:vImp}[view.n]()}
 render();
 </script></body></html>
