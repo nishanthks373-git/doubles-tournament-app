@@ -196,7 +196,8 @@ function layout(teams,sitting,oc,k){
  return{matches,sitting,closed:false}}
 
 /* ---- actions ---- */
-function go(n,id){view={n,id};armed=null;render();scrollTo(0,0);const a=document.getElementById('app');a.classList.remove('enter');void a.offsetWidth;a.classList.add('enter');clearTimeout(go.h);go.h=setTimeout(()=>a.classList.remove('enter'),700)}
+let rx={};
+function go(n,id){view={n,id};armed=null;rx={};render();scrollTo(0,0);const a=document.getElementById('app');a.classList.remove('enter');void a.offsetWidth;a.classList.add('enter');clearTimeout(go.h);go.h=setTimeout(()=>a.classList.remove('enter'),700)}
 const PARENT={team:'x',game:'x',exp:'home',list:'home',hub:'mode',mode:'home',fmt:'hub',newx:'fmt',newt:'fmt',teams:'newt',roster:'x',new:'hub',t:'hub',x:'hub',all:'hub',soon:'home',assign:'home',imp:'home'};
 const racket=()=>SP[ctx.sport]&&SP[ctx.sport][2]===1,hubOf=()=>racket()?'list':'hub';
 function parentOf(n){
@@ -751,7 +752,7 @@ function vTeam(){
 function openGame(mid){const t=T();if(t.bb&&!rosterOk(t)){toast('Add all the players of every team before starting a game');return go('roster',t.id)}ctx.gm=mid;go('game',t.id)}
 /* ---------- cricket ball-by-ball scoring ---------- */
 let bbp=null;
-const lineup=(t,i)=>Array.from({length:t.size||11},(_,j)=>(t.ent[i].p[j]||'Player '+(j+1)));
+const lineup=(t,i)=>Array.from({length:Math.max(t.size||11,t.ent[i].p.length)},(_,j)=>(t.ent[i].p[j]||'Player '+(j+1)));
 const ovTxt=l=>Math.floor(l/6)+'.'+(l%6);
 const ovNum=l=>Math.floor(l/6)+(l%6)/10;
 const WK_BOWLER=['Bowled','Caught','LBW','Stumped','Hit wicket'];
@@ -788,7 +789,7 @@ function bbSync(t,m){
   if(b.inn[k]&&bbDone(t,m,k)){const S=bbStats(t,m,k);c['r'+n]=S.runs;c['w'+n]=S.wk;c['o'+n]=ovNum(S.legal)}
   else{c['r'+n]=null;c['w'+n]=null;c['o'+n]=null}});
  ckSync(t,m)}
-function bbNewInn(t,bat,bowl){return {bat,bowl,ev:[],cur:{s:0,n:1,b:lineup(t,bowl).length-1},nextIn:2,end:false,setup:true,sel:[],bsel:false,pend:null}}
+function bbNewInn(t,bat,bowl){return {bat,bowl,ev:[],cur:{s:0,n:1,b:(t.size||11)-1},nextIn:2,end:false,setup:true,sel:[],bsel:false,pend:null}}
 const ckStarted=m=>!!(m.ck&&(m.ck.nr||ckNums(m.ck).some(v=>v!==null)));
 const smOf=(t,m)=>m.sm||(t.bb?'bb':'sc');
 function bbToss(){
@@ -1246,8 +1247,9 @@ const startBox=t=>t.bb?`<div id=startbox>${rosterOk(t)?`<button onclick="startTo
 function startTour(){const t=T();if(!rosterOk(t))return toast('Add every player first');t.started=true;save();go('x',t.id)}
 function vRoster(){
  const t=T();if(!t){view={n:'home'};return vHome()}
- return backH()+'<h1>Team names and players</h1></div><div class=card><p class=mu style="margin-top:0">Rename a team, change its logo or add players at any time. Changes save automatically.</p>'+(t.bb?`<div class="bbp" style="margin-top:0"><b>Players are required</b><div class=mu>Every team needs ${t.size} players before a match can be scored ball by ball. ${t.ent.filter(e=>e.p.length>=t.size).length} of ${t.ent.length} teams are complete.</div></div>`:'')+imgRow(t.img,'Tournament icon',"pickImg(v=>{T().img=v;save();render()})","delete T().img;save();render()")+
-  t.ent.map((e,i)=>`<div class=tmb>${imgRow(e.img,'Team logo',`pickImg(v=>{T().ent[${i}].img=v;save();render()})`,`delete T().ent[${i}].img;save();render()`)}<div class=mu>Team name</div><input value="${esc(e.n)}" onchange="rnT(${i},this.value)"><div class=mu style="margin:8px 0 0">Players</div>${Array.from({length:Math.max(t.size||0,e.p.length)},(_,j)=>`<input style="margin-top:6px" value="${esc(e.p[j]||'')}" placeholder="Player ${j+1}" oninput="rpT(${i},${j},this.value)">`).join('')}</div>`).join('')+'</div>'+startBox(t)}
+ return backH()+'<h1>Team names and players</h1></div><div class=card><p class=mu style="margin-top:0">Rename a team, change its logo or add players at any time. Players beyond the first '+t.size+' are substitutes. You can pick anyone while scoring, but a team is still all out after '+wmax(t)+' wickets. Changes save automatically.</p>'+(t.bb?`<div class="bbp" style="margin-top:0"><b>Players are required</b><div class=mu>Every team needs ${t.size} players before a match can be scored ball by ball. ${t.ent.filter(e=>e.p.length>=t.size).length} of ${t.ent.length} teams are complete.</div></div>`:'')+imgRow(t.img,'Tournament icon',"pickImg(v=>{T().img=v;save();render()})","delete T().img;save();render()")+
+  t.ent.map((e,i)=>`<div class=tmb>${imgRow(e.img,'Team logo',`pickImg(v=>{T().ent[${i}].img=v;save();render()})`,`delete T().ent[${i}].img;save();render()`)}<div class=mu>Team name</div><input value="${esc(e.n)}" onchange="rnT(${i},this.value)"><div class=mu style="margin:8px 0 0">Players</div>${Array.from({length:Math.max(t.size||0,e.p.length+(rx[i]||0))},(_,j)=>`<input style="margin-top:6px" value="${esc(e.p[j]||'')}" placeholder="${j<(t.size||0)?'Player '+(j+1):'Substitute '+(j+1-(t.size||0))}" oninput="rpT(${i},${j},this.value)">`).join('')}${t.mode==='team'&&t.ent[i].p.length+(rx[i]||0)<40?`<button class=sec style="margin-top:8px" onclick="addSub(${i})">+ Add a substitute</button>`:''}</div>`).join('')+'</div>'+startBox(t)}
+function addSub(i){const e=T().ent[i];const need=Math.max(T().size||0,e.p.length)+1;rx[i]=need-e.p.length;render()}
 function rpT(i,j,v){const e=T().ent[i];const a=Array.from({length:Math.max(T().size||0,e.p.length)},(_,k)=>e.p[k]||'');a[j]=v.trim().slice(0,80);e.p=a.filter(Boolean);save();const sb=document.getElementById('startbox');if(sb)sb.outerHTML=startBox(T())}
 function rnT(i,v){const t=T();v=v.trim().slice(0,80);if(!v||t.ent.some((e,k)=>k!==i&&e.n.toLowerCase()===v.toLowerCase())){toast('Team names must be different and not empty');return render()}t.ent[i].n=v;save()}
 const rosterCard=t=>t.mode==='team'?`<button class="${t.bb&&!rosterOk(t)?'warn':'sec'}" onclick="go('roster',${t.id})">👥 Team names and players${t.bb&&!rosterOk(t)?' (players needed to start)':t.ent.some(e=>e.p.length)?'':' (not added yet)'}</button>`:'';
@@ -1266,7 +1268,7 @@ function sanOO(b,t){
   ov:(Array.isArray(i.ov)?i.ov:[]).slice(0,50).map(o=>({r:N(o.r),w:N(o.w),b:Number.isInteger(o.b)&&o.b>=1&&o.b<=6?o.b:6}))}))}}
 function sanBB(b,t){
  if(!b||typeof b!=='object'||!Array.isArray(b.inn))return undefined;
- const I=(v,mx)=>Number.isInteger(v)&&v>=0&&v<=mx?v:0,N=(v,mx)=>v===null?null:I(v,mx),n=Math.min(Math.max(2,Number.isInteger(t.size)?t.size:11),30),E=t.ent.length;
+ const I=(v,mx)=>Number.isInteger(v)&&v>=0&&v<=mx?v:0,N=(v,mx)=>v===null?null:I(v,mx),n=Math.min(Math.max(2,Number.isInteger(t.size)?t.size:11,...t.ent.map(e=>Array.isArray(e.p)?e.p.length:0)),60),E=t.ent.length;
  const cur=c=>({s:N(c&&c.s,n),n:N(c&&c.n,n),b:I(c&&c.b,n)});
  return {tw:b.tw==='a'||b.tw==='b'?b.tw:'a',td:b.td==='bowl'?'bowl':'bat',dc:{d1:!!(b.dc&&b.dc.d1),d3:!!(b.dc&&b.dc.d3),sw:!(b.dc&&b.dc.sw===false)},tab:['sc','card','balls','info'].includes(b.tab)?b.tab:'sc',
   inn:b.inn.slice(0,2).map(i=>({bat:I(i.bat,E),bowl:I(i.bowl,E),cur:cur(i.cur),nextIn:I(i.nextIn,n),end:!!i.end,setup:!!i.setup,sel:Array.isArray(i.sel)?i.sel.slice(0,2).map(x=>I(x,n)):[],bsel:!!i.bsel,pend:i.pend?{bat:i.pend.bat===null||i.pend.bat===undefined?null:I(i.pend.bat,n),bowl:!!i.pend.bowl}:null,
