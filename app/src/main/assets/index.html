@@ -840,7 +840,7 @@ function bbAdd(e){
 function xcQuiet(){const t=T();settle(t);klStep(t);upd(t);save()}
 function bbRun(n){bbAdd({t:'bat',r:n})}
 function bbDecl(n){bbAdd({t:'bat',r:n,d:1})}
-function bbOpen(k){bbp=bbp===k?null:k;render()}
+function bbOpen(k){bbp=bbp===k?null:k;render();if(bbp==='edit')scrollTo(0,0)}
 function bbChip(n){
  if(bbp==='wd')bbAdd({t:'wd',x:1+n});else if(bbp==='nb')bbAdd({t:'nb',r:n,x:1});
  else if(bbp==='bye')bbAdd({t:'bye',x:n});else if(bbp==='lb')bbAdd({t:'lb',x:n});
@@ -930,11 +930,13 @@ function vBB(t,m){
  const sel=(slot,list,val)=>`<select onchange="bbSet('${slot}',this.value)">${list.map((p,i)=>`<option value=${i} ${i===val?'selected':''}>${esc(p)}</option>`).join('')}</select>`;
  const st=inn.cur.s,nn=inn.cur.n,safe=v=>v===null?0:v;
  const overIdx=Math.max(0,Math.floor((S.legal-(S.legal>0&&S.legal%6===0?1:0))/6));
+ const edP=(bbp==='edit'?(()=>{const bs=[st,nn].filter(x=>x!==null).sort((a,b)=>a-b),gone=Object.keys(S.bt).filter(i=>S.bt[i].out).map(Number),rs=(i,k)=>`<label>Batter ${k+1}</label><select onchange="bbRep(${i},this.value)">${L.map((p,j)=>`<option value=${j} ${j===i?'selected':''} ${gone.includes(j)||(j!==i&&bs.includes(j))?'disabled':''}>${esc(p)}</option>`).join('')}</select>`;return `<div class=bbedit>${bs.map(rs).join('')}<label>Bowler</label>${sel('b',B,inn.cur.b)}<div class=mu style="margin-top:8px">Changes apply from the next ball. Balls already bowled keep their batter and bowler. To change who is on strike, tap a batter in the table.</div><button class=sec onclick="bbOpen('edit')">Done</button></div>`})():'');
+ if(!done)h+=`<button class="${bbp==='edit'?'on':'sec'}" style="margin-top:0" onclick="bbOpen('edit')">🔄 Change batter / bowler</button>${edP}`;
  h+=`<div class=card><div class=bbt><div class=bbh><button class="pen" onclick="bbOpen('edit')">✏️</button><b>Batter</b><span>R</span><span>B</span><span>4s</span><span>6s</span><span>SR</span></div>`+
   [st,nn].filter(x=>x!==null).sort((a,b)=>a-b).map(i=>[i,i===st]).map(([i,hl])=>`<div class="bbr tapr ${hl?'hl':''}" onclick="bbStrike(${i})"><span class=nmx>${esc(L[i])}${hl?' ★':''}</span><span><b>${bst(i).r}</b></span><span>${bst(i).b}</span><span>${bst(i).f4}</span><span>${bst(i).f6}</span><span>${bst(i).b?(bst(i).r*100/bst(i).b).toFixed(0):'0'}</span></div>`).join('')+
   `<div class=bbh style="margin-top:8px"><button class="pen" onclick="bbOpen('edit')">✏️</button><b>Bowler</b><span>O</span><span>M</span><span>R</span><span>W</span><span>Eco</span></div>`+
   (()=>{const w=S.bw[inn.cur.b]||{legal:0,m:0,r:0,w:0};return `<div class=bbr><span class=nmx>${esc(B[inn.cur.b])}</span><span>${ovTxt(w.legal)}</span><span>${w.m}</span><span>${w.r}</span><span><b>${w.w}</b></span><span>${w.legal?(w.r*6/w.legal).toFixed(1):'0.0'}</span></div>`})()+`</div>`+
-  (bbp==='edit'?(()=>{const bs=[st,nn].filter(x=>x!==null).sort((a,b)=>a-b),gone=Object.keys(S.bt).filter(i=>S.bt[i].out).map(Number),rs=(i,k)=>`<label>Batter ${k+1}</label><select onchange="bbRep(${i},this.value)">${L.map((p,j)=>`<option value=${j} ${j===i?'selected':''} ${gone.includes(j)||(j!==i&&bs.includes(j))?'disabled':''}>${esc(p)}</option>`).join('')}</select>`;return `<div class=bbedit>${bs.map(rs).join('')}<label>Bowler</label>${sel('b',B,inn.cur.b)}<div class=mu style="margin-top:8px">To change who is on strike, tap a batter in the table.</div><button class=sec onclick="bbOpen('edit')">Done</button></div>`})():'')+
+
   `<div class=bcs style="margin-top:10px">${bbBalls(S.balls[overIdx])}</div></div>`;
  if(done){
   if(k===0)h+=`<div class="card win"><b>Innings complete</b><div>${esc(t.ent[inn.bat].n)} ${S.runs}-${S.wk} in ${ovTxt(S.legal)} overs.<br>Target ${S.runs+1}.</div><button onclick="bbNext()">Start 2nd innings</button></div>`;
