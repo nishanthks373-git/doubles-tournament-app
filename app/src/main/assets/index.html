@@ -1078,14 +1078,14 @@ function drawSet(i,v){
   else{settle(t);klStep(t)}}
  save();render()}
 /* restart an unscored match from the toss */
+const ckScored=m=>m.oo?m.oo.inn.some(i=>i.ov.some(o=>o.r!==null||o.w!==null)):m.sc?ckStarted(m):false;
 function ckRestartable(t,m){
  if(!isCk(t)||t.done||m.bye||m.a===null||m.b===null||W(m)!==null)return false;
- if(m.oo)return m.oo.inn.length===1&&m.oo.inn[0].ov.every(o=>o.r===null&&o.w===null);
+ if(m.oo||m.sc)return true;
  if(m.bb)return m.bb.inn.length===1&&m.bb.inn[0].ev.length===0;
- if(m.sc)return !ckStarted(m);
  return !!(m.ck&&(m.ck.tw||m.ck.td));
 }
-const restartCard=(t,m)=>ckRestartable(t,m)?`<button class="${armed==='rst'?'arm':'ghost'}" onclick="arm('rst')">${armed==='rst'?'Tap again to restart from the toss':'Restart match from the toss'}</button><p class=mu style="text-align:center">Scoring has not started, so this match can begin again. Once a ball or score is entered it cannot be restarted.</p>`:'';
+const restartCard=(t,m)=>ckRestartable(t,m)?`<button class="${armed==='rst'?'arm':'ghost'}" onclick="arm('rst')">${armed==='rst'?'Tap again to restart from the toss':'Restart match from the toss'}</button><p class=mu style="text-align:center">${ckScored(m)?'Everything scored in this match so far will be cleared and the match starts again from the toss.':'Scoring has not started, so this match can begin again from the toss.'}${m.bb?' Ball by ball cannot be restarted once a ball is recorded.':''}</p>`:'';
 function ckRestart(){
  const t=T(),m=t&&t.m.find(x=>x.id===ctx.gm);if(!m||!ckRestartable(t,m))return render();
  delete m.bb;delete m.oo;delete m.sc;m.sa=null;m.sb=null;
@@ -1308,7 +1308,7 @@ function vEditT(){
  (tm?`<label>Players per team</label><input type=number inputmode=numeric min=1 max=30 value="${t.size}" ${lk?'disabled':''} onchange="edSize(this.value)">${note}`:'')+
  (ck?`<label>Overs per innings</label><input type=number inputmode=numeric min=1 max=50 value="${t.ov}" onchange="edOv(this.value)"><div class=mu style="margin-top:6px">Matches already started keep their own overs. Per-match overs can still be changed before a match starts.</div>
  <label>Record every ball by default?</label>${yn(t.bb,'edBb(1)','edBb(0)')}
- <label>Is single batting allowed?</label>${yn(t.sb,'edSb(1)','edSb(0)',lk)}<div class=mu style="margin-top:6px">${t.sb?'Every player can be out, so '+wmax(t)+' wickets end an innings.':'One batter is left over, so '+wmax(t)+' wickets end an innings.'}</div>${note}`:'')+
+ <label>Is single batting allowed?</label>${yn(t.sb,'edSb(1)','edSb(0)')}<div class=mu style="margin-top:6px">${t.sb?'Every player can be out, so '+wmax(t)+' wickets end an innings.':'One batter is left over, so '+wmax(t)+' wickets end an innings.'} This can be changed at any time, even after matches have started. Results of finished matches are worked out again with the new number.</div>`:'')+
  (tm&&t.fmt==='grp'&&RULE[t.sport].pen?`<label>Penalty shootout when a group match is drawn?</label>${yn(t.pen,'edPen(1)','edPen(0)',lk)}${note}`:'')+
  '<button style="margin-top:14px" onclick="goBack()">Done</button></div>'}
 function edName(v){const t=T();v=v.trim().slice(0,80);if(!v){toast('The tournament needs a name');return render()}t.name=v;save()}
@@ -1316,7 +1316,13 @@ function edSize(v){const t=T();v=parseInt(v,10);if(tStarted(t))return render();i
 function edOv(v){const t=T();v=parseInt(v,10);if(!(v>=1&&v<=50)){toast('Overs per innings must be between 1 and 50');return render()}
  t.m.forEach(m=>{if(m.ov===undefined&&(mStarted(m)||ckStarted(m)))m.ov=t.ov});t.ov=v;save();render()}
 function edBb(v){const t=T();t.bb=!!v;save();render()}
-function edSb(v){const t=T();if(tStarted(t))return render();if(v)t.sb=true;else delete t.sb;save();render()}
+function edSb(v){const t=T();
+ if(!v){const mx=(t.size||11)-1,bad=t.m.find(m=>(m.ck&&[m.ck.w1,m.ck.w2].some(w=>w!==null&&w!==undefined&&w>mx))||(m.oo&&m.oo.inn.some((_,k)=>ooCalc(t,m,k).wk>mx))||(m.bb&&m.bb.inn.some((_,k)=>bbStats(t,m,k).wk>mx)));
+  if(bad){toast('A match already has '+(mx+1)+' wickets down. Single batting cannot be turned off');return render()}}
+ if(v)t.sb=true;else delete t.sb;
+ t.m.forEach(m=>{if(m.bb)m.bb.inn.forEach(i=>{if(i.cur&&i.cur.s===null&&i.cur.n!==null){i.cur.s=i.cur.n;i.cur.n=null}})});
+ t.m.forEach(m=>{if(m.ck&&(m.sc||m.oo||m.bb))try{ckSync(t,m)}catch(e){}});
+ save();xcQuiet();render()}
 function edPen(v){const t=T();if(tStarted(t))return render();t.pen=!!v;save();render()}
 function addSub(i){const e=T().ent[i];const need=Math.max(T().size||0,e.p.length)+1;rx[i]=need-e.p.length;render()}
 function rpT(i,j,v){const e=T().ent[i];const a=Array.from({length:Math.max(T().size||0,e.p.length)},(_,k)=>e.p[k]||'');a[j]=v.trim().slice(0,80);e.p=a.filter(Boolean);save();const sb=document.getElementById('startbox');if(sb)sb.outerHTML=rosBox(T())}
